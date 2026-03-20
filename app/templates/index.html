@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YU Shield</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container { max-width: 480px; width: 100%; padding: 20px; }
+        h1 {
+            text-align: center;
+            font-size: 28px;
+            margin: 30px 0 5px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle { text-align: center; color: #888; font-size: 14px; margin-bottom: 30px; }
+        .card {
+            background: #1a1a2e;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 16px;
+            border: 1px solid #2a2a4a;
+        }
+        .card h2 { font-size: 16px; color: #8b5cf6; margin-bottom: 16px; }
+        .input-group { margin-bottom: 14px; }
+        .input-group label { display: block; font-size: 13px; color: #aaa; margin-bottom: 6px; }
+        .input-group input[type="text"] {
+            width: 100%; padding: 10px 14px; background: #0f0f1a; border: 1px solid #333;
+            border-radius: 10px; color: #fff; font-size: 14px; outline: none;
+        }
+        .input-group input[type="text"]:focus { border-color: #6366f1; }
+        .slider-row { display: flex; align-items: center; gap: 12px; }
+        .slider-row input[type="range"] {
+            flex: 1; -webkit-appearance: none; height: 6px; border-radius: 3px;
+            background: #333; outline: none;
+        }
+        .slider-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+            background: #6366f1; cursor: pointer;
+        }
+        .slider-value {
+            min-width: 28px; text-align: center; font-weight: 600;
+            font-size: 18px; color: #6366f1;
+        }
+        .emoji { font-size: 20px; min-width: 28px; text-align: center; }
+        textarea {
+            width: 100%; padding: 10px 14px; background: #0f0f1a; border: 1px solid #333;
+            border-radius: 10px; color: #fff; font-size: 14px; outline: none;
+            resize: none; height: 60px; font-family: inherit;
+        }
+        textarea:focus { border-color: #6366f1; }
+        button {
+            width: 100%; padding: 14px; border: none; border-radius: 12px;
+            font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+        }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-secondary {
+            background: #2a2a4a; color: #8b5cf6; border: 1px solid #3a3a5a;
+        }
+        .btn-secondary:hover { background: #333366; }
+        .response-box {
+            background: #12122a; border-radius: 12px; padding: 16px;
+            margin-top: 16px; line-height: 1.6; font-size: 14px;
+            border-left: 3px solid #6366f1; display: none;
+        }
+        .response-box.visible { display: block; }
+        .history-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 0; border-bottom: 1px solid #222;
+            font-size: 13px;
+        }
+        .history-item:last-child { border-bottom: none; }
+        .history-date { color: #666; font-size: 12px; }
+        .history-scores span { margin-left: 10px; }
+        .baseline-badge {
+            display: inline-block; padding: 4px 10px; border-radius: 20px;
+            font-size: 12px; background: #1a3a2a; color: #4ade80;
+        }
+        .alert-badge {
+            display: inline-block; padding: 4px 10px; border-radius: 20px;
+            font-size: 12px; background: #3a1a1a; color: #f87171;
+        }
+        .setup-screen { display: block; }
+        .app-screen { display: none; }
+        .loading { text-align: center; color: #888; padding: 20px; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .tab {
+            flex: 1; padding: 10px; text-align: center; border-radius: 10px;
+            cursor: pointer; font-size: 13px; font-weight: 500;
+            background: #1a1a2e; color: #888; border: 1px solid #2a2a4a;
+        }
+        .tab.active { background: #2a2a5a; color: #8b5cf6; border-color: #6366f1; }
+        .provider-select {
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            margin-bottom: 20px;
+        }
+        .provider-select label { font-size: 12px; color: #888; }
+        .provider-select select {
+            background: #1a1a2e; color: #8b5cf6; border: 1px solid #2a2a4a;
+            border-radius: 8px; padding: 6px 12px; font-size: 13px; outline: none;
+            cursor: pointer;
+        }
+        .provider-select select:focus { border-color: #6366f1; }
+        .privacy-note { text-align: center; font-size: 11px; color: #555; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>YU Shield</h1>
+        <p class="subtitle">Your wellness companion</p>
+
+        <!-- Setup -->
+        <div id="setup" class="setup-screen">
+            <div class="card">
+                <h2>Welcome</h2>
+                <div class="input-group">
+                    <label>First name</label>
+                    <input type="text" id="firstName" placeholder="e.g. Omar">
+                </div>
+                <button class="btn-primary" onclick="register()">Get Started</button>
+            </div>
+        </div>
+
+        <!-- App -->
+        <div id="app" class="app-screen">
+            <div class="provider-select">
+                <label>AI Engine:</label>
+                <select id="provider" onchange="localStorage.setItem('yu_provider', this.value)">
+                    <option value="ramalama">RamaLama (Local)</option>
+                    <option value="claude">Claude API (Cloud)</option>
+                </select>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('checkin')">Check-in</div>
+                <div class="tab" onclick="showTab('insights')">Insights</div>
+                <div class="tab" onclick="showTab('history')">History</div>
+            </div>
+
+            <!-- Check-in Tab -->
+            <div id="tab-checkin">
+                <div class="card">
+                    <h2>How are you today?</h2>
+
+                    <div class="input-group">
+                        <label>Mood</label>
+                        <div class="slider-row">
+                            <span class="emoji">😔</span>
+                            <input type="range" id="mood" min="1" max="10" value="5" oninput="updateVal('mood')">
+                            <span class="slider-value" id="mood-val">5</span>
+                            <span class="emoji">😊</span>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Energy</label>
+                        <div class="slider-row">
+                            <span class="emoji">🔋</span>
+                            <input type="range" id="energy" min="1" max="10" value="5" oninput="updateVal('energy')">
+                            <span class="slider-value" id="energy-val">5</span>
+                            <span class="emoji">⚡</span>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Sleep Quality</label>
+                        <div class="slider-row">
+                            <span class="emoji">😴</span>
+                            <input type="range" id="sleep" min="1" max="10" value="5" oninput="updateVal('sleep')">
+                            <span class="slider-value" id="sleep-val">5</span>
+                            <span class="emoji">✨</span>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Anything on your mind? (optional)</label>
+                        <textarea id="note" placeholder="Quick note about your day..."></textarea>
+                    </div>
+
+                    <button class="btn-primary" id="checkinBtn" onclick="submitCheckin()">Submit Check-in</button>
+                </div>
+
+                <div class="response-box" id="response"></div>
+            </div>
+
+            <!-- Insights Tab -->
+            <div id="tab-insights" style="display:none;">
+                <div class="card">
+                    <h2>Your Wellness Insights</h2>
+                    <div id="insights-content"><p class="loading">Loading insights...</p></div>
+                </div>
+            </div>
+
+            <!-- History Tab -->
+            <div id="tab-history" style="display:none;">
+                <div class="card">
+                    <h2>Check-in History</h2>
+                    <div id="baseline-info"></div>
+                    <div id="history-content"><p class="loading">Loading...</p></div>
+                </div>
+            </div>
+        </div>
+
+        <p class="privacy-note">🔒 Your data stays with you. Employers only see anonymous team aggregates.</p>
+    </div>
+
+    <script>
+        let userId = localStorage.getItem('yu_user_id');
+        let firstName = localStorage.getItem('yu_first_name');
+
+        if (userId) {
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+        }
+
+        const savedProvider = localStorage.getItem('yu_provider') || 'ramalama';
+        document.addEventListener('DOMContentLoaded', () => {
+            const sel = document.getElementById('provider');
+            if (sel) sel.value = savedProvider;
+        });
+
+        function getProvider() {
+            return document.getElementById('provider')?.value || 'ramalama';
+        }
+
+        function updateVal(id) {
+            document.getElementById(id + '-val').textContent = document.getElementById(id).value;
+        }
+
+        async function register() {
+            const name = document.getElementById('firstName').value.trim();
+            if (!name) return;
+
+            userId = name.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now();
+            firstName = name;
+            localStorage.setItem('yu_user_id', userId);
+            localStorage.setItem('yu_first_name', firstName);
+
+            await fetch('/api/users', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({user_id: userId, first_name: firstName})
+            });
+
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+        }
+
+        async function submitCheckin() {
+            const btn = document.getElementById('checkinBtn');
+            btn.disabled = true;
+            btn.textContent = 'Thinking...';
+
+            const data = {
+                user_id: userId,
+                mood: parseInt(document.getElementById('mood').value),
+                energy: parseInt(document.getElementById('energy').value),
+                sleep: parseInt(document.getElementById('sleep').value),
+                note: document.getElementById('note').value || null,
+                provider: getProvider()
+            };
+
+            try {
+                const res = await fetch('/api/checkin', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+
+                const box = document.getElementById('response');
+                box.innerHTML = result.response || result.error;
+                box.classList.add('visible');
+
+                if (result.drift && result.drift.alerts && result.drift.alerts.length > 0) {
+                    box.innerHTML += '<br><br><span class="alert-badge">Pattern detected</span>';
+                }
+
+                document.getElementById('note').value = '';
+            } catch (e) {
+                alert('Error connecting to server');
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Submit Check-in';
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach((t, i) => {
+                t.classList.toggle('active', t.textContent.toLowerCase().includes(tab));
+            });
+            document.getElementById('tab-checkin').style.display = tab === 'checkin' ? 'block' : 'none';
+            document.getElementById('tab-insights').style.display = tab === 'insights' ? 'block' : 'none';
+            document.getElementById('tab-history').style.display = tab === 'history' ? 'block' : 'none';
+
+            if (tab === 'insights') loadInsights();
+            if (tab === 'history') loadHistory();
+        }
+
+        async function loadInsights() {
+            const el = document.getElementById('insights-content');
+            el.innerHTML = '<p class="loading">Analyzing your patterns...</p>';
+            try {
+                const res = await fetch(`/api/insights/${userId}?provider=${getProvider()}`);
+                const data = await res.json();
+                let html = `<p style="line-height:1.7">${data.insight}</p>`;
+                if (data.baseline) {
+                    html += `<br><span class="baseline-badge">Baseline: mood ${data.baseline.mood} · energy ${data.baseline.energy} · sleep ${data.baseline.sleep}</span>`;
+                }
+                if (data.drift && data.drift.alerts.length > 0) {
+                    html += ` <span class="alert-badge">Drift detected</span>`;
+                }
+                html += `<br><br><small style="color:#666">${data.total_checkins} check-ins recorded</small>`;
+                el.innerHTML = html;
+            } catch (e) {
+                el.innerHTML = '<p>Could not load insights.</p>';
+            }
+        }
+
+        async function loadHistory() {
+            const el = document.getElementById('history-content');
+            const bi = document.getElementById('baseline-info');
+            el.innerHTML = '<p class="loading">Loading...</p>';
+            try {
+                const res = await fetch(`/api/history/${userId}`);
+                const data = await res.json();
+
+                if (data.baseline) {
+                    bi.innerHTML = `<p style="margin-bottom:12px"><span class="baseline-badge">Baseline: mood ${data.baseline.mood} · energy ${data.baseline.energy} · sleep ${data.baseline.sleep}</span></p>`;
+                } else {
+                    bi.innerHTML = `<p style="margin-bottom:12px;color:#888;font-size:13px">${data.total || 0}/7 check-ins to build baseline</p>`;
+                }
+
+                if (!data.checkins || data.checkins.length === 0) {
+                    el.innerHTML = '<p style="color:#888">No check-ins yet.</p>';
+                    return;
+                }
+
+                let html = '';
+                for (const c of data.checkins.reverse()) {
+                    const date = new Date(c.created_at).toLocaleDateString('en-US', {month:'short', day:'numeric'});
+                    html += `<div class="history-item">
+                        <span class="history-date">${date}</span>
+                        <span class="history-scores">
+                            <span>😊 ${c.mood}</span>
+                            <span>⚡ ${c.energy}</span>
+                            <span>😴 ${c.sleep}</span>
+                        </span>
+                    </div>`;
+                }
+                el.innerHTML = html;
+            } catch (e) {
+                el.innerHTML = '<p>Could not load history.</p>';
+            }
+        }
+    </script>
+</body>
+</html>
