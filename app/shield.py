@@ -84,7 +84,7 @@ def _chat_claude(messages: list[dict], max_tokens: int = 300) -> str:
             "content-type": "application/json",
         },
         json={
-            "model": "claude-sonnet-4-20250514",
+            "model": "claude-sonnet-4-6",
             "max_tokens": max_tokens,
             "system": system,
             "messages": api_messages,
