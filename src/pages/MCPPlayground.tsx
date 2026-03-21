@@ -19,7 +19,7 @@ const TOOLS: MCPTool[] = [
   {
     id: "check-wellness",
     name: "check_my_wellness",
-    description: "Employee self-service: check YOUR OWN wellness status — baseline, trends, drift alerts. Only accessible by the authenticated user.",
+    description: "Employee self-service: check YOUR OWN wellness status including baseline, trends, and drift alerts. Only accessible by the authenticated user.",
     params: [{ name: "user_id", type: "text", placeholder: "e.g. sarah-demo (your own ID)", required: true }],
     endpoint: "/api/history",
     method: "GET",
@@ -28,7 +28,7 @@ const TOOLS: MCPTool[] = [
   {
     id: "team-summary",
     name: "get_team_wellness_summary",
-    description: "Get anonymized team-wide wellness aggregates — participation, drift alerts, daily trends",
+    description: "Get anonymized team-wide wellness aggregates: participation, drift alerts, daily trends",
     params: [],
     endpoint: "/api/dashboard",
     method: "GET",
@@ -61,7 +61,7 @@ const TOOLS: MCPTool[] = [
   {
     id: "book-activity",
     name: "book_wellness_activity",
-    description: "Book a wellness activity for an employee — returns booking confirmation",
+    description: "Book a wellness activity for an employee. Returns booking confirmation",
     params: [
       { name: "user_id", type: "text", placeholder: "e.g. sarah-demo", required: true },
       { name: "activity", type: "text", placeholder: "e.g. Restorative Yoga", required: true },
@@ -172,7 +172,7 @@ const MCPPlayground = () => {
             </div>
             <div>
               <span className="font-bold text-foreground">MCP Playground</span>
-              <p className="text-[10px] text-muted-foreground">YU Shield Wellbeing Tools — Live API</p>
+              <p className="text-[10px] text-muted-foreground">YU Shield Wellbeing Tools - Live API</p>
             </div>
           </div>
         </div>
@@ -185,7 +185,7 @@ const MCPPlayground = () => {
       {/* Description */}
       <div className="px-6 py-4 border-b bg-gradient-to-r from-emerald-500/5 via-transparent to-teal-500/5">
         <p className="text-xs text-muted-foreground max-w-3xl">
-          <span className="font-semibold text-foreground">Model Context Protocol (MCP)</span> lets any AI assistant — Claude Desktop, Cursor, or custom agents — interact with YU Shield's wellness tools programmatically.
+          <span className="font-semibold text-foreground">Model Context Protocol (MCP)</span> lets any AI assistant (Claude Desktop, Cursor, or custom agents) interact with YU Shield's wellness tools programmatically.
           Test the tools below in real-time.
         </p>
       </div>
@@ -221,7 +221,7 @@ const MCPPlayground = () => {
                       className="w-full text-left px-2 py-1.5 rounded-md hover:bg-background transition-colors"
                     >
                       <p className="text-[10px] font-mono font-semibold text-foreground">{u.id}</p>
-                      <p className="text-[9px] text-muted-foreground">{u.name} — {u.note}</p>
+                      <p className="text-[9px] text-muted-foreground">{u.name} - {u.note}</p>
                     </button>
                   ))}
                 </div>

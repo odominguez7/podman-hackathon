@@ -18,6 +18,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             id TEXT PRIMARY KEY,
             first_name TEXT NOT NULL,
+            department TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -34,15 +35,21 @@ def init_db():
 
         CREATE INDEX IF NOT EXISTS idx_checkins_user_date ON checkins(user_id, created_at);
     """)
+
+    # Migration: add department column if it doesn't exist
+    columns = [row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()]
+    if "department" not in columns:
+        conn.execute("ALTER TABLE users ADD COLUMN department TEXT")
+
     conn.commit()
     conn.close()
 
 
-def create_user(user_id: str, first_name: str):
+def create_user(user_id: str, first_name: str, department: str = None):
     conn = get_db()
     conn.execute(
-        "INSERT OR IGNORE INTO users (id, first_name) VALUES (?, ?)",
-        (user_id, first_name),
+        "INSERT OR IGNORE INTO users (id, first_name, department) VALUES (?, ?, ?)",
+        (user_id, first_name, department),
     )
     conn.commit()
     conn.close()
@@ -132,7 +139,7 @@ def detect_drift(user_id: str) -> Optional[dict]:
 def get_team_members() -> list[dict]:
     """Return anonymized per-member wellness status for manager view."""
     conn = get_db()
-    users = conn.execute("SELECT id, first_name, created_at FROM users").fetchall()
+    users = conn.execute("SELECT id, first_name, department, created_at FROM users").fetchall()
     conn.close()
 
     members = []
@@ -154,6 +161,7 @@ def get_team_members() -> list[dict]:
 
         members.append({
             "status": status,
+            "department": u["department"],
             "checkins_7d": len(checkins),
             "latest_mood": latest["mood"] if latest else None,
             "latest_energy": latest["energy"] if latest else None,
@@ -221,3 +229,117 @@ def get_dashboard_aggregates() -> dict:
         "drift_alerts": drift_alerts,
         "daily_trends": daily_trends,
     }
+
+
+# --- Department-level org mapping ---
+DEPARTMENT_HEADCOUNTS = {
+    "Engineering": 220,
+    "Product & Design": 70,
+    "Sales & Partnerships": 90,
+    "Marketing & Growth": 60,
+    "Customer Success": 80,
+    "Finance & Legal": 40,
+    "People & Workplace": 40,
+    "Data & Analytics": 20,
+    "Strategy & CEO Office": 10,
+}
+
+
+def get_department_stats() -> list[dict]:
+    """Return per-department aggregated wellness stats for the enterprise dashboard."""
+    conn = get_db()
+    cutoff_14d = (datetime.now() - timedelta(days=14)).isoformat()
+    cutoff_7d_recent = (datetime.now() - timedelta(days=3)).isoformat()
+    cutoff_7d_prior = (datetime.now() - timedelta(days=10)).isoformat()
+
+    # Get all users grouped by department
+    users = conn.execute("SELECT id, department FROM users WHERE department IS NOT NULL").fetchall()
+    conn.close()
+
+    dept_users: dict[str, list[str]] = {}
+    for u in users:
+        dept = u["department"]
+        if dept not in dept_users:
+            dept_users[dept] = []
+        dept_users[dept].append(u["id"])
+
+    results = []
+    for dept, total_heads in DEPARTMENT_HEADCOUNTS.items():
+        user_ids = dept_users.get(dept, [])
+        seed_count = len(user_ids)
+
+        if seed_count == 0:
+            results.append({
+                "department": dept,
+                "total_heads": total_heads,
+                "seed_users": 0,
+                "active_users": 0,
+                "avg_mood": None,
+                "avg_energy": None,
+                "avg_sleep": None,
+                "drift_alerts": 0,
+                "participation_rate": 0.0,
+                "trend": "stable",
+            })
+            continue
+
+        conn = get_db()
+        placeholders = ",".join("?" for _ in user_ids)
+
+        # Active users (at least 1 checkin in last 14 days)
+        active = conn.execute(
+            f"SELECT COUNT(DISTINCT user_id) FROM checkins WHERE user_id IN ({placeholders}) AND created_at >= ?",
+            (*user_ids, cutoff_14d),
+        ).fetchone()[0]
+
+        # Averages over last 14 days
+        avgs = conn.execute(
+            f"""SELECT ROUND(AVG(mood), 1) as mood, ROUND(AVG(energy), 1) as energy, ROUND(AVG(sleep), 1) as sleep
+                FROM checkins WHERE user_id IN ({placeholders}) AND created_at >= ?""",
+            (*user_ids, cutoff_14d),
+        ).fetchone()
+
+        # Trend: compare recent 3 days vs prior 7 days
+        recent_avg = conn.execute(
+            f"SELECT AVG(mood) as mood FROM checkins WHERE user_id IN ({placeholders}) AND created_at >= ?",
+            (*user_ids, cutoff_7d_recent),
+        ).fetchone()
+
+        prior_avg = conn.execute(
+            f"SELECT AVG(mood) as mood FROM checkins WHERE user_id IN ({placeholders}) AND created_at >= ? AND created_at < ?",
+            (*user_ids, cutoff_7d_prior, cutoff_7d_recent),
+        ).fetchone()
+
+        conn.close()
+
+        # Determine trend
+        trend = "stable"
+        if recent_avg["mood"] is not None and prior_avg["mood"] is not None:
+            diff = recent_avg["mood"] - prior_avg["mood"]
+            if diff < -0.3:
+                trend = "declining"
+            elif diff > 0.3:
+                trend = "improving"
+
+        # Count drift alerts
+        drift_count = 0
+        for uid in user_ids:
+            if detect_drift(uid) is not None:
+                drift_count += 1
+
+        participation = round(active / seed_count, 2) if seed_count > 0 else 0.0
+
+        results.append({
+            "department": dept,
+            "total_heads": total_heads,
+            "seed_users": seed_count,
+            "active_users": active,
+            "avg_mood": avgs["mood"],
+            "avg_energy": avgs["energy"],
+            "avg_sleep": avgs["sleep"],
+            "drift_alerts": drift_count,
+            "participation_rate": participation,
+            "trend": trend,
+        })
+
+    return sorted(results, key=lambda d: d["drift_alerts"], reverse=True)

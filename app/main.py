@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from app.database import init_db, create_user, get_user, add_checkin, get_checkins, get_baseline, detect_drift, get_dashboard_aggregates, get_team_members
+from app.database import init_db, create_user, get_user, add_checkin, get_checkins, get_baseline, detect_drift, get_dashboard_aggregates, get_team_members, get_department_stats
 from app.shield import generate_checkin_response, generate_insight
 from app.seed_demo import seed_demo_data
 
@@ -180,6 +180,11 @@ def dashboard():
 @app.get("/api/dashboard/team")
 def dashboard_team():
     return get_team_members()
+
+
+@app.get("/api/dashboard/departments")
+def dashboard_departments():
+    return get_department_stats()
 
 
 class RecommendationsRequest(BaseModel):

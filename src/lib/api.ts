@@ -59,3 +59,8 @@ export async function seedDemo() {
   const res = await fetch(`${API_BASE}/api/seed-demo`, { method: "POST" });
   return res.json();
 }
+
+export async function getDepartments() {
+  const res = await fetch(`${API_BASE}/api/dashboard/departments`);
+  return res.json();
+}

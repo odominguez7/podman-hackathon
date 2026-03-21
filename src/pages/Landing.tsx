@@ -47,17 +47,20 @@ const Landing = () => {
                 <span className="text-xs font-semibold px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20">
                   MCP Ready
                 </span>
+                <span className="text-xs font-semibold px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                  Privacy-First Architecture
+                </span>
               </div>
               <h1 className="text-5xl md:text-6xl font-extrabold text-foreground tracking-tight">
                 YU Shield
               </h1>
-              <p className="text-xl text-muted-foreground font-medium">
-                Prevention, Not Treatment
+              <p className="text-xl text-muted-foreground font-medium italic">
+                From you, to you.
               </p>
             </div>
 
             <p className="text-base text-muted-foreground leading-relaxed max-w-xl mx-auto">
-              AI-powered employee wellness built for the enterprise. Granite 3.3 runs locally inside a Podman container. Your data never leaves your infrastructure.
+              A private, AI-powered daily practice that helps you understand your own patterns so you can show up better for your work, your family, and yourself. Granite 3.3 runs locally. Your data never leaves your infrastructure.
             </p>
 
             <div className="flex items-center justify-center gap-4">
@@ -70,7 +73,7 @@ const Landing = () => {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Takes less than 2 minutes. 100% confidential. Data stays with the employee.
+              30 seconds of honesty. Built for the employee, not the employer. Your data is yours.
             </p>
           </div>
         </section>
@@ -85,7 +88,7 @@ const Landing = () => {
               </div>
               <h3 className="font-bold text-foreground">Private by Architecture</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Granite 3.3 8B runs locally via RamaLama inside a Podman container. No employee data ever reaches an external API. Built for HIPAA-sensitive and regulated environments.
+                Granite 3.3 runs locally via RamaLama inside a Podman container. Your data exists to help you, not your employer. Employers see only anonymous team aggregates. Built for HIPAA-sensitive environments.
               </p>
             </div>
 
@@ -120,9 +123,9 @@ const Landing = () => {
                 <Shield className="h-7 w-7 text-primary" />
               </div>
               <div className="space-y-2 text-center md:text-left">
-                <p className="font-bold text-foreground">Built from lived experience</p>
+              <p className="font-bold text-foreground">Built from lived experience</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Omar Dominguez spent 11 years managing capacity in manufacturing before MIT Sloan. He lost 80 lbs starting with 7 minutes a day, ran the Boston Marathon, and finished Ironman 70.3. YU Shield is not a hackathon project. It is the product he wished existed when he was burning out on the floor.
+                  Omar Dominguez spent 11 years managing capacity in manufacturing before MIT. He lost 80 lbs starting with 7 minutes a day, ran the Boston Marathon, and finished Ironman 70.3. YU Shield exists because taking care of yourself is not selfish. It's one of the best ways to take care of the people who depend on you.
                 </p>
               </div>
             </div>
@@ -176,6 +179,13 @@ const Landing = () => {
         </section>
 
       </main>
+
+      {/* Footer */}
+      <footer className="px-6 py-6 border-t">
+        <p className="text-[11px] text-muted-foreground/50 text-center">
+          Built by Omar Dominguez. MIT, 11 years optimizing capacity in manufacturing. Now fixing employee wellness.
+        </p>
+      </footer>
     </div>
   );
 };

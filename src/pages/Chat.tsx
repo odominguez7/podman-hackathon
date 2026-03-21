@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Shield, ChevronLeft, History, Send, X, BarChart3, Scan, Lock, Cloud, LogOut, Zap, Moon, Timer, Database } from "lucide-react";
+import { Shield, ChevronLeft, History, Send, X, BarChart3, Scan, Lock, Cloud, LogOut, Zap, Moon, Timer, Database, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { submitCheckin, getHistory, getInsights, registerUser, compareCheckin, seedDemo } from "@/lib/api";
@@ -61,7 +61,7 @@ const Chat = () => {
   const [seeding, setSeeding] = useState(false);
   const [bookingCategory, setBookingCategory] = useState<string>("calm");
   const [loading, setLoading] = useState(false);
-  const [provider, setProvider] = useState<string>(localStorage.getItem("yu_provider") || "ramalama");
+  const [provider, setProvider] = useState<string>("ramalama");
   const [activeTab, setActiveTab] = useState<"checkin" | "insights" | "lab" | "book">("checkin");
   const [xrayMode, setXrayMode] = useState(false);
   const [xrayResult, setXrayResult] = useState<{
@@ -74,12 +74,17 @@ const Chat = () => {
   const [baseline, setBaseline] = useState<Baseline | null>(null);
   const [insightText, setInsightText] = useState<string>("");
   const [insightLoading, setInsightLoading] = useState(false);
+  const [lastDrift, setLastDrift] = useState<{ alerts: { metric: string; baseline: number; recent: number }[] } | null>(null);
+
+  // Human approval step state (ethics: user validates AI coaching)
+  const [approvedMessages, setApprovedMessages] = useState<Set<string>>(new Set());
+  const [dismissedMessages, setDismissedMessages] = useState<Set<string>>(new Set());
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
       role: "ai",
-      content: "Hi there! I'm your wellbeing companion. Let's do a quick check-in — it takes less than a minute.",
+      content: "Hey there. I'm YU, your private wellness companion. Everything you share stays with you. Let's do a quick check-in. 30 seconds, just for you.",
       timestamp: new Date(),
     },
   ]);
@@ -151,7 +156,7 @@ const Chat = () => {
     setMessages([{
       id: "welcome",
       role: "ai",
-      content: "Hi there! I'm your wellbeing companion. Let's do a quick check-in — it takes less than a minute.",
+      content: "Hey there. I'm YU, your private wellness companion. Everything you share stays with you. Let's do a quick check-in. 30 seconds, just for you.",
       timestamp: new Date(),
     }]);
     setHistory([]);
@@ -206,6 +211,7 @@ const Chat = () => {
         setXrayResult({ local: result.local, cloud: result.cloud });
 
         if (result.baseline) setBaseline(result.baseline);
+        setLastDrift(result.drift && result.drift.alerts && result.drift.alerts.length > 0 ? result.drift : null);
         if (result.drift && result.drift.alerts && result.drift.alerts.length > 0) {
           const alertLines = result.drift.alerts.map(
             (a: { metric: string; baseline: number; recent: number }) =>
@@ -235,6 +241,7 @@ const Chat = () => {
         setMessages((prev) => [...prev, aiMsg]);
 
         if (result.baseline) setBaseline(result.baseline);
+        setLastDrift(result.drift && result.drift.alerts && result.drift.alerts.length > 0 ? result.drift : null);
 
         if (result.drift && result.drift.alerts && result.drift.alerts.length > 0) {
           const alertLines = result.drift.alerts.map(
@@ -302,7 +309,7 @@ const Chat = () => {
                 <Shield className="h-10 w-10 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-foreground">Welcome to YU Shield</h2>
-              <p className="text-sm text-muted-foreground">Your AI wellbeing companion. Quick daily check-ins to keep you at your best.</p>
+              <p className="text-sm text-muted-foreground">From you, to you. A daily practice that helps you show up better for your work, your family, and yourself.</p>
             </div>
             <div className="space-y-4">
               <div>
@@ -322,7 +329,7 @@ const Chat = () => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground text-center leading-relaxed">
-              Your data stays with you. Employers only see anonymous team aggregates.
+              Your data is yours. Always. Employers see only anonymous team aggregates, never your check-ins.
             </p>
           </div>
         </main>
@@ -372,7 +379,6 @@ const Chat = () => {
               className="text-xs bg-card border border-border rounded-lg px-2 py-1.5 text-foreground"
             >
               <option value="ramalama">Local (Granite)</option>
-              <option value="claude">Cloud (Claude)</option>
             </select>
           )}
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowHistory(!showHistory)}>
@@ -521,6 +527,79 @@ const Chat = () => {
                         );
                       })()}
                     </div>
+                    {/* Grounding tag for AI responses (not welcome message) */}
+                    {msg.role === "ai" && msg.id !== "welcome" && (
+                      <div className="mt-1.5 ml-1 max-w-[75%] space-y-1">
+                        <p className="text-[10px] text-muted-foreground/70">
+                          <span className="inline-flex items-center gap-1">
+                            {!baseline ? (
+                              <>
+                                <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                                Limited data
+                              </>
+                            ) : baseline.data_points < 14 ? (
+                              <>
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                Building confidence
+                              </>
+                            ) : (
+                              <>
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                Strong baseline
+                              </>
+                            )}
+                          </span>
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/70">
+                          {baseline
+                            ? `Based on: ${baseline.data_points} check-ins, ${Math.min(baseline.data_points, 7)}-day baseline`
+                            : "Baseline not yet established (need 7+ check-ins)"}
+                        </p>
+                        {lastDrift && lastDrift.alerts && lastDrift.alerts.length > 0 && msg.id.includes("drift") && (
+                          lastDrift.alerts.map((a, i) => (
+                            <p key={i} className="text-[10px] text-amber-600/80">
+                              {`\u26A0 Drift detected: ${a.metric} dropped from ${a.baseline} \u2192 ${a.recent}`}
+                            </p>
+                          ))
+                        )}
+                        <div className="flex items-center gap-1 text-[9px] text-green-600/70">
+                          <Lock className="h-2.5 w-2.5" />
+                          <span>Processed on-device by Granite 3.3. Your data never left this machine</span>
+                        </div>
+                        <p className="text-[9px] text-muted-foreground/50 italic">
+                          Wellness guidance only. Consider speaking with a professional for clinical concerns
+                        </p>
+                      </div>
+                    )}
+                    {/* Human approval step (ethics) */}
+                    {msg.role === "ai" && msg.id !== "welcome" && (
+                      <div className="mt-1 ml-1">
+                        {approvedMessages.has(msg.id) ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-green-600/80">
+                            <Check className="h-2.5 w-2.5" /> This resonated
+                          </span>
+                        ) : dismissedMessages.has(msg.id) ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/50">
+                            <X className="h-2.5 w-2.5" /> Noted
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setApprovedMessages(prev => new Set(prev).add(msg.id))}
+                              className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/60 hover:text-green-600 transition-colors"
+                            >
+                              <Check className="h-2.5 w-2.5" /> This resonates
+                            </button>
+                            <button
+                              onClick={() => setDismissedMessages(prev => new Set(prev).add(msg.id))}
+                              className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
+                            >
+                              <X className="h-2.5 w-2.5" /> Not helpful
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
 
@@ -545,7 +624,7 @@ const Chat = () => {
                   </div>
                 )}
 
-                {/* X-Ray Results — THE SHOWSTOPPER */}
+                {/* X-Ray Results - THE SHOWSTOPPER */}
                 {xrayResult && (
                   <div className="w-full my-4 space-y-3">
                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
@@ -618,6 +697,44 @@ const Chat = () => {
                     <p className="text-[10px] text-center text-muted-foreground">
                       Same check-in, two AI models. Both cite your actual data. Only one keeps it private.
                     </p>
+                    {/* Grounding tag for X-Ray */}
+                    <div className="mt-2 mx-auto max-w-md rounded-lg border border-border/50 bg-muted/30 px-3 py-2 space-y-1">
+                      <p className="text-[10px] text-muted-foreground/70 text-center">
+                        <span className="inline-flex items-center gap-1">
+                          {!baseline ? (
+                            <>
+                              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                              Limited data
+                            </>
+                          ) : baseline.data_points < 14 ? (
+                            <>
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                              Building confidence
+                            </>
+                          ) : (
+                            <>
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                              Strong baseline
+                            </>
+                          )}
+                        </span>
+                      </p>
+                      <p className="text-[10px] text-muted-foreground/70 text-center">
+                        {baseline
+                          ? `Based on: ${baseline.data_points} check-ins, ${Math.min(baseline.data_points, 7)}-day baseline`
+                          : "Baseline not yet established (need 7+ check-ins)"}
+                      </p>
+                      {lastDrift && lastDrift.alerts && lastDrift.alerts.length > 0 && (
+                        lastDrift.alerts.map((a, i) => (
+                          <p key={i} className="text-[10px] text-amber-600/80 text-center">
+                            {`\u26A0 Drift detected: ${a.metric} dropped from ${a.baseline} \u2192 ${a.recent}`}
+                          </p>
+                        ))
+                      )}
+                      <p className="text-[9px] text-muted-foreground/50 italic text-center">
+                        Wellness guidance only. Consider speaking with a professional for clinical concerns
+                      </p>
+                    </div>
                   </div>
                 )}
                 <div ref={bottomRef} />
@@ -629,7 +746,7 @@ const Chat = () => {
                   {/* Mood selector */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-semibold text-foreground">Mood</p>
+                      <p className="text-xs font-semibold text-foreground">How are you feeling?</p>
                       {mood && <p className="text-xs text-primary font-medium">{MOODS[mood - 1].label}</p>}
                     </div>
                     <div className="flex gap-1 justify-center">
@@ -650,7 +767,7 @@ const Chat = () => {
                     </div>
                   </div>
 
-                  {/* Energy & Sleep — pill selectors */}
+                  {/* Energy & Sleep - pill selectors */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
@@ -704,7 +821,7 @@ const Chat = () => {
                   <textarea
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder="Anything on your mind? (optional)"
+                    placeholder="Anything you want to get off your chest? (optional)"
                     className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm resize-none h-12 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
                   />
 
@@ -788,7 +905,7 @@ const Chat = () => {
               section="protocols"
             />
           ) : (
-            /* Book tab — inline activities */
+            /* Book tab - inline activities */
             <div className="flex-1 overflow-y-auto">
               <BookingInline
                 recommended={bookingCategory}
@@ -829,7 +946,7 @@ const Chat = () => {
         )}
       </div>
 
-      {/* Footer — Partner Logos */}
+      {/* Footer - Partner Logos */}
       <div className="border-t bg-card/50 px-4 py-2 shrink-0">
         <div className="flex items-center justify-center gap-6 opacity-35 hover:opacity-55 transition-opacity">
           <div className="flex items-center gap-1">

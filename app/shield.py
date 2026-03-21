@@ -1,7 +1,7 @@
 import os
 import httpx
 
-RAMALAMA_URL = os.environ.get("RAMALAMA_URL", "http://host.containers.internal:51564")
+RAMALAMA_URL = os.environ.get("RAMALAMA_URL", "http://localhost:64896")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
 SYSTEM_PROMPT = """You are YU Shield, an empathetic AI wellbeing companion for employees. You are NOT a therapist — you are a proactive, evidence-based wellness coach that helps people perform at their best through self-awareness and smart preparation.
@@ -44,6 +44,7 @@ Your role:
    - When on a positive streak: suggest maintaining momentum with energizing activities
 8. Be a PERFORMANCE COACH: help them discover what drives their best days by connecting wellness patterns to outcomes
 9. Never make clinical claims — frame everything as wellness support
+10. When any wellbeing score is very low (any metric ≤ 2) or drift is detected, end your response with a brief, professional boundary note encouraging the user to seek human support. For example: "If you're struggling, reaching out to a counselor or your company's Employee Assistance Program (EAP) can help."
 
 Tone: Warm, direct, actionable. Like a thoughtful coach who knows your data. Use first name. Keep messages concise but always include at least one specific activity recommendation with the provider name.
 
@@ -137,6 +138,7 @@ def generate_checkin_response(first_name: str, checkin: dict, baseline: dict = N
     context += "\n- If scores are good (all >=4): celebrate, no need to push activities. Just acknowledge and encourage"
     context += "\n- If scores are average (3): light suggestion, not pushy. Maybe mention checking out the Wellness Lab"
     context += "\n- If note mentions meetings/deadlines/stress: suggest focus prep activities specifically"
+    context += "\n- If any score is 1, always include: 'Consider reaching out to your EAP or a wellness professional for additional support.'"
     context += "\n- Keep it real, keep it brief. Don't oversell."
     context += "\n- End by asking about upcoming events or meetings"
 

@@ -349,7 +349,7 @@ const WellnessHub = ({ history, baseline, insightText, insightLoading, onBookAct
             )}
           </div>
 
-          {/* Mini Timeline — last 7 days */}
+          {/* Mini Timeline - last 7 days */}
           {last7.length > 0 && (
             <div className="rounded-2xl border border-border bg-card p-4 space-y-3 shadow-sm">
               <p className="text-xs font-semibold text-foreground">Last 7 Days</p>
@@ -432,11 +432,24 @@ const WellnessHub = ({ history, baseline, insightText, insightLoading, onBookAct
                 <span className="text-sm text-muted-foreground">Analyzing your patterns...</span>
               </div>
             ) : (
-              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{insightText}</p>
+              <>
+                <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{insightText}</p>
+                {/* Grounding tag for insights */}
+                <div className="mt-3 pt-2 border-t border-border/40 space-y-1">
+                  <p className="text-[10px] text-muted-foreground/70">
+                    {baseline
+                      ? `Based on: ${baseline.data_points} check-ins, ${Math.min(baseline.data_points, 7)}-day baseline`
+                      : "Baseline not yet established (need 7+ check-ins)"}
+                  </p>
+                  <p className="text-[9px] text-muted-foreground/50 italic">
+                    Wellness guidance only. Consider speaking with a professional for clinical concerns
+                  </p>
+                </div>
+              </>
             )}
           </div>
 
-          {/* Smart CTA — only when trends warrant action */}
+          {/* Smart CTA - only when trends warrant action */}
           {(avgMood <= 3 || avgEnergy <= 2.5 || avgSleep <= 2.5 || (moodTrend.direction === "down") || (energyTrend.direction === "down")) ? (
             <div className="rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 p-4 space-y-3">
               <div className="flex items-center gap-2">
@@ -473,7 +486,7 @@ const WellnessHub = ({ history, baseline, insightText, insightLoading, onBookAct
           ) : null}
         </div>
       ) : (
-        /* Wellness Lab — Experimental Protocols */
+        /* Wellness Lab - Experimental Protocols */
         <div className="px-4 py-4 space-y-4">
           <div className="text-center space-y-1 py-2">
             <h3 className="text-lg font-bold text-foreground">Wellness Lab</h3>
@@ -513,7 +526,7 @@ const WellnessHub = ({ history, baseline, insightText, insightLoading, onBookAct
             })}
           </div>
 
-          {/* Team Challenges — Social Wellness */}
+          {/* Team Challenges - Social Wellness */}
           <div className="space-y-3 pt-2">
             <div className="text-center space-y-1">
               <h3 className="text-lg font-bold text-foreground">Team Challenges</h3>
