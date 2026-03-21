@@ -331,5 +331,5 @@ YU Shield exists because the people who depend on you need you at your best.
   <img src="https://img.shields.io/badge/Red_Hat-EE0000?style=flat-square&logo=redhat&logoColor=white" />
   <img src="https://img.shields.io/badge/IBM-052FAD?style=flat-square&logo=ibm&logoColor=white" />
   <img src="https://img.shields.io/badge/Podman-892CA0?style=flat-square&logo=podman&logoColor=white" />
-  <img src="https://img.shields.io/badge/MIT_Sloan-8A8B8C?style=flat-square&logo=data:image/svg+xml;base64,&logoColor=white" />
+  <img src="https://img.shields.io/badge/MIT_Sloan-A31F34?style=flat-square&logoColor=white" />
 </p>
