@@ -1,9 +1,11 @@
-import { useState, useRef, useEffect } from "react";
-import { Shield, ChevronLeft, History, Send, X, BarChart3 } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Shield, ChevronLeft, History, Send, X, BarChart3, Scan, Lock, Cloud, LogOut, Zap, Moon, Timer } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { submitCheckin, getHistory, getInsights, registerUser } from "@/lib/api";
+import { submitCheckin, getHistory, getInsights, registerUser, compareCheckin } from "@/lib/api";
 import BookingModal from "@/components/BookingModal";
+import WellnessHub from "@/components/WellnessHub";
+import BookingInline from "@/components/BookingInline";
 
 interface ChatMessage {
   id: string;
@@ -29,12 +31,15 @@ interface Baseline {
 }
 
 const MOODS = [
-  { emoji: "😞", value: 1 },
-  { emoji: "😕", value: 2 },
-  { emoji: "😐", value: 3 },
-  { emoji: "🙂", value: 4 },
-  { emoji: "😊", value: 5 },
+  { emoji: "😞", value: 1, label: "Bad" },
+  { emoji: "😕", value: 2, label: "Low" },
+  { emoji: "😐", value: 3, label: "Okay" },
+  { emoji: "🙂", value: 4, label: "Good" },
+  { emoji: "😊", value: 5, label: "Great" },
 ];
+
+const ENERGY_LABELS = ["Drained", "Low", "Moderate", "High", "Energized"];
+const SLEEP_LABELS = ["Terrible", "Poor", "Fair", "Good", "Excellent"];
 
 const Chat = () => {
   const navigate = useNavigate();
@@ -52,9 +57,15 @@ const Chat = () => {
   // UI state
   const [showHistory, setShowHistory] = useState(false);
   const [showBooking, setShowBooking] = useState(false);
+  const [bookingCategory, setBookingCategory] = useState<string>("calm");
   const [loading, setLoading] = useState(false);
   const [provider, setProvider] = useState<string>(localStorage.getItem("yu_provider") || "ramalama");
-  const [activeTab, setActiveTab] = useState<"checkin" | "insights">("checkin");
+  const [activeTab, setActiveTab] = useState<"checkin" | "insights" | "lab" | "book">("checkin");
+  const [xrayMode, setXrayMode] = useState(false);
+  const [xrayResult, setXrayResult] = useState<{
+    local: { response: string; time_ms: number; error?: boolean };
+    cloud: { response: string; time_ms: number; error?: boolean };
+  } | null>(null);
 
   // Data state
   const [history, setHistory] = useState<HistoryCheckIn[]>([]);
@@ -66,7 +77,7 @@ const Chat = () => {
     {
       id: "welcome",
       role: "ai",
-      content: "Hi there! 👋 I'm your wellness companion. Let's do a quick check-in.\n\nSelect your mood, energy, and sleep below — it takes less than a minute.",
+      content: "Hi there! I'm your wellbeing companion. Let's do a quick check-in — it takes less than a minute.",
       timestamp: new Date(),
     },
   ]);
@@ -77,7 +88,7 @@ const Chat = () => {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, xrayResult]);
 
   const loadHistory = async () => {
     if (!userId) return;
@@ -92,6 +103,22 @@ const Chat = () => {
     if (userId) loadHistory();
   }, [userId]);
 
+  // Keyboard shortcuts: 1-5 for mood
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (activeTab !== "checkin" || loading) return;
+    const target = e.target as HTMLElement;
+    if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+    const num = parseInt(e.key);
+    if (num >= 1 && num <= 5) {
+      setMood(num);
+    }
+  }, [activeTab, loading]);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
   const handleRegister = async () => {
     const name = nameInput.trim();
     if (!name) return;
@@ -102,18 +129,52 @@ const Chat = () => {
     setRegistered(true);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("yu_user_id");
+    localStorage.removeItem("yu_first_name");
+    localStorage.removeItem("yu_provider");
+    setRegistered(false);
+    setMessages([{
+      id: "welcome",
+      role: "ai",
+      content: "Hi there! I'm your wellbeing companion. Let's do a quick check-in — it takes less than a minute.",
+      timestamp: new Date(),
+    }]);
+    setHistory([]);
+    setBaseline(null);
+    setXrayResult(null);
+  };
+
+  const handleQuickDemo = () => {
+    const randomMood = Math.floor(Math.random() * 5) + 1;
+    const randomEnergy = Math.floor(Math.random() * 5) + 1;
+    const randomSleep = Math.floor(Math.random() * 5) + 1;
+    const notes = [
+      "big presentation tomorrow", "slept terribly", "feeling great today",
+      "deadline stress", "had a great workout", "too many meetings",
+      "couldn't focus", "team lunch was fun", "need a break",
+      "interview prep", "feeling overwhelmed", "morning run felt amazing",
+      "back pain from desk", "excited about new project", "rough commute",
+    ];
+    setMood(randomMood);
+    setEnergy(randomEnergy);
+    setSleep(randomSleep);
+    setNote(notes[Math.floor(Math.random() * notes.length)]);
+  };
+
   const handleSubmitCheckIn = async () => {
     if (mood === null || !userId) return;
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       role: "user",
-      content: `Mood: ${MOODS[mood - 1].emoji} (${mood}/5) · Energy: ⚡${energy}/5 · Sleep: 💤 ${sleep}/5${note ? `\n💭 ${note}` : ""}`,
+      content: `${MOODS[mood - 1].emoji} Mood ${mood}/5 · Zap ${energy}/5 · Sleep ${sleep}/5${note ? ` · "${note}"` : ""}`,
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
+    setXrayResult(null);
 
     const submittedMood = mood;
     const submittedEnergy = energy;
@@ -126,37 +187,58 @@ const Chat = () => {
     setNote("");
 
     try {
-      const result = await submitCheckin(userId, submittedMood, submittedEnergy, submittedSleep, provider, submittedNote);
+      if (xrayMode) {
+        const result = await compareCheckin(userId, submittedMood, submittedEnergy, submittedSleep, submittedNote);
+        setXrayResult({ local: result.local, cloud: result.cloud });
 
-      // Main AI response
-      const aiMsg: ChatMessage = {
-        id: `ai-${Date.now()}`,
-        role: "ai",
-        content: result.response || "Thanks for checking in!",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, aiMsg]);
+        if (result.baseline) setBaseline(result.baseline);
+        if (result.drift && result.drift.alerts && result.drift.alerts.length > 0) {
+          const alertLines = result.drift.alerts.map(
+            (a: { metric: string; baseline: number; recent: number }) =>
+              `${a.metric}: baseline ${a.baseline} -> recent ${a.recent}`
+          );
+          setTimeout(() => {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `ai-drift-${Date.now()}`,
+                role: "ai",
+                content: `Pattern Detected:\n${alertLines.join("\n")}\n\nI'd recommend trying a wellness class. Would you like to book one?`,
+                timestamp: new Date(),
+              },
+            ]);
+          }, 1000);
+        }
+      } else {
+        const result = await submitCheckin(userId, submittedMood, submittedEnergy, submittedSleep, provider, submittedNote);
 
-      // Update baseline
-      if (result.baseline) setBaseline(result.baseline);
+        const aiMsg: ChatMessage = {
+          id: `ai-${Date.now()}`,
+          role: "ai",
+          content: result.response || "Thanks for checking in!",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, aiMsg]);
 
-      // Drift alert with specific data
-      if (result.drift && result.drift.alerts && result.drift.alerts.length > 0) {
-        const alertLines = result.drift.alerts.map(
-          (a: { metric: string; baseline: number; recent: number }) =>
-            `${a.metric}: baseline ${a.baseline} → recent ${a.recent}`
-        );
-        setTimeout(() => {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `ai-drift-${Date.now()}`,
-              role: "ai",
-              content: `⚠️ Pattern Detected:\n${alertLines.join("\n")}\n\nI'd recommend trying a wellness class. Would you like to book one?`,
-              timestamp: new Date(),
-            },
-          ]);
-        }, 1000);
+        if (result.baseline) setBaseline(result.baseline);
+
+        if (result.drift && result.drift.alerts && result.drift.alerts.length > 0) {
+          const alertLines = result.drift.alerts.map(
+            (a: { metric: string; baseline: number; recent: number }) =>
+              `${a.metric}: baseline ${a.baseline} -> recent ${a.recent}`
+          );
+          setTimeout(() => {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `ai-drift-${Date.now()}`,
+                role: "ai",
+                content: `Pattern Detected:\n${alertLines.join("\n")}\n\nI'd recommend trying a wellness class. Would you like to book one?`,
+                timestamp: new Date(),
+              },
+            ]);
+          }, 1000);
+        }
       }
 
       loadHistory();
@@ -191,40 +273,40 @@ const Chat = () => {
   // --- Registration Screen ---
   if (!registered) {
     return (
-      <div className="h-screen flex flex-col bg-background">
-        <header className="flex items-center px-4 py-3 border-b bg-card shrink-0">
+      <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background to-primary/5">
+        <header className="flex items-center px-6 py-4 shrink-0">
           <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <Shield className="h-5 w-5 text-primary ml-2" />
-          <span className="font-semibold text-foreground ml-2">YU Shield</span>
         </header>
         <main className="flex-1 flex items-center justify-center px-6">
-          <div className="w-full max-w-sm space-y-6">
-            <div className="text-center space-y-2">
-              <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <Shield className="h-8 w-8 text-primary" />
+          <div className="w-full max-w-sm space-y-8">
+            <div className="text-center space-y-3">
+              <div className="mx-auto w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/20">
+                <Shield className="h-10 w-10 text-white" />
               </div>
-              <h2 className="text-xl font-bold text-foreground">Welcome</h2>
-              <p className="text-sm text-muted-foreground">Let's get to know you</p>
+              <h2 className="text-2xl font-bold text-foreground">Welcome to YU Shield</h2>
+              <p className="text-sm text-muted-foreground">Your AI wellbeing companion. Quick daily check-ins to keep you at your best.</p>
             </div>
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-foreground">First name</label>
-              <input
-                type="text"
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleRegister()}
-                placeholder="e.g. Omar"
-                className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                autoFocus
-              />
-              <Button variant="hero" className="w-full" onClick={handleRegister} disabled={!nameInput.trim()}>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-1.5">What's your first name?</label>
+                <input
+                  type="text"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleRegister()}
+                  placeholder="e.g. Sarah"
+                  className="w-full px-4 py-3.5 rounded-xl border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                  autoFocus
+                />
+              </div>
+              <Button variant="hero" className="w-full h-12 text-base font-semibold" onClick={handleRegister} disabled={!nameInput.trim()}>
                 Get Started
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground text-center">
-              🔒 Your data stays with you. Employers only see anonymous team aggregates.
+            <p className="text-xs text-muted-foreground text-center leading-relaxed">
+              Your data stays with you. Employers only see anonymous team aggregates.
             </p>
           </div>
         </main>
@@ -236,55 +318,94 @@ const Chat = () => {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b bg-card shrink-0">
+      <header className="flex items-center justify-between px-4 py-2.5 border-b bg-card/80 backdrop-blur-sm shrink-0">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
-            <ChevronLeft className="h-5 w-5" />
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/")}>
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Shield className="h-5 w-5 text-primary" />
-          <span className="font-semibold text-foreground">YU Shield</span>
-          {firstName && <span className="text-xs text-muted-foreground">· {firstName}</span>}
+          <div className="flex items-center gap-1.5">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
+              <Shield className="h-3.5 w-3.5 text-white" />
+            </div>
+            <div>
+              <span className="font-semibold text-sm text-foreground">YU Shield</span>
+              {firstName && <span className="text-xs text-muted-foreground ml-1.5">{firstName}</span>}
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <select
-            value={provider}
-            onChange={(e) => {
-              setProvider(e.target.value);
-              localStorage.setItem("yu_provider", e.target.value);
-            }}
-            className="text-xs bg-card border border-border rounded-md px-2 py-1 text-foreground"
+        <div className="flex items-center gap-1.5">
+          {/* X-Ray Toggle */}
+          <button
+            onClick={() => { setXrayMode(!xrayMode); setXrayResult(null); }}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all ${
+              xrayMode
+                ? "bg-gradient-to-r from-green-500 to-blue-500 text-white shadow-md shadow-primary/20"
+                : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+            }`}
           >
-            <option value="ramalama">RamaLama (Local)</option>
-            <option value="claude">Claude (Cloud)</option>
-          </select>
-          <Button variant="ghost" size="icon" onClick={() => setShowHistory(!showHistory)}>
-            <History className="h-5 w-5" />
+            <Scan className="h-3.5 w-3.5" />
+            X-Ray
+          </button>
+          {!xrayMode && (
+            <select
+              value={provider}
+              onChange={(e) => {
+                setProvider(e.target.value);
+                localStorage.setItem("yu_provider", e.target.value);
+              }}
+              className="text-xs bg-card border border-border rounded-lg px-2 py-1.5 text-foreground"
+            >
+              <option value="ramalama">Local (Granite)</option>
+              <option value="claude">Cloud (Claude)</option>
+            </select>
+          )}
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowHistory(!showHistory)}>
+            <History className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={handleLogout} title="Logout">
+            <LogOut className="h-4 w-4" />
           </Button>
         </div>
       </header>
 
+      {/* X-Ray Mode Banner */}
+      {xrayMode && (
+        <div className="px-4 py-2 bg-gradient-to-r from-green-500/10 via-transparent to-blue-500/10 border-b shrink-0">
+          <div className="flex items-center justify-center gap-3 text-xs">
+            <span className="flex items-center gap-1 text-green-600 font-medium">
+              <Lock className="h-3 w-3" /> Granite 3.3 Local
+            </span>
+            <span className="text-muted-foreground font-bold">VS</span>
+            <span className="flex items-center gap-1 text-blue-600 font-medium">
+              <Cloud className="h-3 w-3" /> Claude Sonnet Cloud
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
-      <div className="flex border-b bg-card shrink-0 px-4">
-        <button
-          onClick={() => setActiveTab("checkin")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "checkin"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Check-in
-        </button>
-        <button
-          onClick={() => { setActiveTab("insights"); loadInsights(); }}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1 ${
-            activeTab === "insights"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <BarChart3 className="h-3.5 w-3.5" /> Insights
-        </button>
+      <div className="flex border-b bg-card shrink-0 px-2 overflow-x-auto">
+        {([
+          { id: "checkin" as const, label: "Check-in" },
+          { id: "insights" as const, label: "Insights" },
+          { id: "lab" as const, label: "Lab" },
+          { id: "book" as const, label: "Book" },
+        ]).map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => {
+              setActiveTab(tab.id);
+              if (tab.id === "insights") loadInsights();
+            }}
+            className={`px-3.5 py-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === tab.id
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Baseline banner */}
@@ -292,15 +413,23 @@ const Chat = () => {
         <div className="px-4 py-2 bg-card border-b shrink-0">
           {baseline ? (
             <div className="flex items-center gap-2 text-xs">
-              <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 font-medium">
+              <span className="px-2.5 py-1 rounded-full bg-green-500/10 text-green-600 font-medium">
                 Baseline: mood {baseline.mood} · energy {baseline.energy} · sleep {baseline.sleep}
               </span>
               <span className="text-muted-foreground">{baseline.data_points} check-ins</span>
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">
-              {history.length}/7 check-ins to build your personal baseline
-            </p>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-500"
+                  style={{ width: `${(history.length / 7) * 100}%` }}
+                />
+              </div>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {history.length}/7 to baseline
+              </span>
+            </div>
           )}
         </div>
       )}
@@ -314,151 +443,338 @@ const Chat = () => {
               <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
                 {messages.map((msg) => (
                   <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                    {msg.role === "ai" && (
+                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center mr-2 mt-0.5 shrink-0">
+                        <Shield className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                    )}
                     <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                      className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
                         msg.role === "user"
-                          ? "bg-chat-user text-chat-user-foreground rounded-br-md"
-                          : "bg-chat-ai text-chat-ai-foreground rounded-bl-md"
+                          ? "bg-primary text-primary-foreground rounded-br-md"
+                          : "bg-card border border-border text-foreground rounded-bl-md shadow-sm"
                       }`}
                     >
                       {msg.content.split("\n").map((line, i) => {
-                        if (line.startsWith("⚠️")) {
+                        if (line.startsWith("Pattern Detected")) {
                           return (
-                            <p key={i} className="mt-2 font-semibold text-warning">
-                              {line.replace(/\*\*/g, "")}
+                            <p key={i} className="font-semibold text-amber-600">
+                              {line}
                             </p>
                           );
                         }
                         return <p key={i}>{line}</p>;
                       })}
-                      {msg.role === "ai" && msg.content.includes("wellness class") && (
-                        <Button
-                          variant="hero"
-                          size="sm"
-                          className="mt-2"
-                          onClick={() => setShowBooking(true)}
-                        >
-                          Book Wellness Class
-                        </Button>
-                      )}
+                      {msg.role === "ai" && (() => {
+                        const text = msg.content.toLowerCase();
+                        const calmWords = ["restorative yoga", "guided meditation", "sound bath", "nature walk", "breathwork", "box breathing", "yin yoga"];
+                        const energizeWords = ["hiit", "power vinyasa", "run club", "running club", "spin class", "cycling"];
+                        const focusWords = ["focus flow", "cold plunge", "journaling", "light therapy"];
+                        const recoverWords = ["deep stretch", "chair massage", "foam rolling", "sauna"];
+                        const labWords = ["phone detox", "clean eating", "hydration", "dopamine fast", "digital sunset", "no alcohol", "detox challenge"];
+                        const hasCalm = calmWords.some(w => text.includes(w));
+                        const hasEnergize = energizeWords.some(w => text.includes(w));
+                        const hasFocus = focusWords.some(w => text.includes(w));
+                        const hasRecover = recoverWords.some(w => text.includes(w));
+                        const hasLab = labWords.some(w => text.includes(w));
+                        const hasAny = hasCalm || hasEnergize || hasFocus || hasRecover;
+                        if (!hasAny) return null;
+                        const category = hasCalm ? "calm" : hasEnergize ? "energize" : hasFocus ? "focus" : "recover";
+                        return (
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            <Button
+                              variant="hero"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => { setBookingCategory(category); setActiveTab("book"); }}
+                            >
+                              Book Now
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs opacity-70"
+                              onClick={() => { setBookingCategory("all"); setActiveTab("book"); }}
+                            >
+                              Browse All
+                            </Button>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 ))}
+
+                {/* Loading */}
                 {loading && (
                   <div className="flex justify-start">
-                    <div className="bg-chat-ai text-chat-ai-foreground rounded-2xl rounded-bl-md px-4 py-2.5 text-sm animate-pulse">
-                      Thinking...
+                    <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center mr-2 mt-0.5 shrink-0">
+                      <Shield className="h-3.5 w-3.5 text-primary" />
                     </div>
+                    <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-3 text-sm shadow-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                          <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                          <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                        </div>
+                        <span className="text-muted-foreground text-xs">
+                          {xrayMode ? "Running both models..." : "Thinking..."}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* X-Ray Results — THE SHOWSTOPPER */}
+                {xrayResult && (
+                  <div className="w-full my-4 space-y-3">
+                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                      <Scan className="h-3.5 w-3.5" />
+                      <span className="font-semibold uppercase tracking-wider">X-Ray Comparison</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Local (RamaLama) Card */}
+                      <div className="rounded-2xl border-2 border-green-500/40 bg-gradient-to-b from-green-50 to-white dark:from-green-950/30 dark:to-card p-5 space-y-3 shadow-lg shadow-green-500/10 transition-all hover:shadow-xl hover:shadow-green-500/15">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-green-500/15 flex items-center justify-center">
+                              <Lock className="h-4 w-4 text-green-600" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-green-700 dark:text-green-400">Granite 3.3</p>
+                              <p className="text-[10px] text-green-600/70">IBM RamaLama</p>
+                            </div>
+                          </div>
+                          <span className="px-2 py-1 rounded-full bg-green-500/15 text-green-700 text-[10px] font-bold tracking-wide">LOCAL</span>
+                        </div>
+                        <div className="min-h-[80px]">
+                          <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                            {xrayResult.local.error ? "Provider unavailable" : xrayResult.local.response}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between pt-3 border-t border-green-500/20">
+                          <div className="flex items-center gap-1 text-[10px] text-green-600">
+                            <Lock className="h-3 w-3" />
+                            <span>Data never left this device</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs font-mono font-bold text-green-700 bg-green-500/10 px-2 py-0.5 rounded-full">
+                            <Timer className="h-3 w-3" />
+                            {(xrayResult.local.time_ms / 1000).toFixed(1)}s
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Cloud (Claude) Card */}
+                      <div className="rounded-2xl border-2 border-blue-500/40 bg-gradient-to-b from-blue-50 to-white dark:from-blue-950/30 dark:to-card p-5 space-y-3 shadow-lg shadow-blue-500/10 transition-all hover:shadow-xl hover:shadow-blue-500/15">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                              <Cloud className="h-4 w-4 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-blue-700 dark:text-blue-400">Claude Sonnet</p>
+                              <p className="text-[10px] text-blue-600/70">Anthropic Cloud</p>
+                            </div>
+                          </div>
+                          <span className="px-2 py-1 rounded-full bg-blue-500/15 text-blue-700 text-[10px] font-bold tracking-wide">CLOUD</span>
+                        </div>
+                        <div className="min-h-[80px]">
+                          <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                            {xrayResult.cloud.error ? "Provider unavailable" : xrayResult.cloud.response}
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between pt-3 border-t border-blue-500/20">
+                          <div className="flex items-center gap-1 text-[10px] text-blue-600">
+                            <Cloud className="h-3 w-3" />
+                            <span>Sent to Anthropic API</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs font-mono font-bold text-blue-700 bg-blue-500/10 px-2 py-0.5 rounded-full">
+                            <Timer className="h-3 w-3" />
+                            {(xrayResult.cloud.time_ms / 1000).toFixed(1)}s
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-center text-muted-foreground">
+                      Same check-in, two AI models. Both cite your actual data. Only one keeps it private.
+                    </p>
                   </div>
                 )}
                 <div ref={bottomRef} />
               </div>
 
-              {/* Input area */}
-              <div className="border-t bg-card px-4 py-4 space-y-4 shrink-0">
-                {/* Mood selector */}
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2 font-medium">How's your mood?</p>
+              {/* Check-in Input Panel */}
+              <div className="border-t bg-card px-4 py-4 shrink-0">
+                <div className="max-w-lg mx-auto space-y-4">
+                  {/* Mood selector */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-foreground">Mood</p>
+                      {mood && <p className="text-xs text-primary font-medium">{MOODS[mood - 1].label}</p>}
+                    </div>
+                    <div className="flex gap-1 justify-center">
+                      {MOODS.map((m) => (
+                        <button
+                          key={m.value}
+                          onClick={() => setMood(m.value)}
+                          className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all ${
+                            mood === m.value
+                              ? "bg-primary/15 scale-105 ring-2 ring-primary/30 shadow-sm"
+                              : "hover:bg-muted"
+                          }`}
+                        >
+                          <span className="text-2xl">{m.emoji}</span>
+                          <span className="text-[10px] text-muted-foreground">{m.value}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Energy & Sleep — pill selectors */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-xs font-semibold text-foreground flex items-center gap-1">
+                          <Zap className="h-3 w-3 text-amber-500" /> Energy
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">{ENERGY_LABELS[energy - 1]}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((v) => (
+                          <button
+                            key={v}
+                            onClick={() => setEnergy(v)}
+                            className={`flex-1 h-9 rounded-lg text-xs font-semibold transition-all ${
+                              energy >= v
+                                ? "bg-amber-500 text-white shadow-sm"
+                                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            }`}
+                          >
+                            {v}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-xs font-semibold text-foreground flex items-center gap-1">
+                          <Moon className="h-3 w-3 text-indigo-500" /> Sleep
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">{SLEEP_LABELS[sleep - 1]}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((v) => (
+                          <button
+                            key={v}
+                            onClick={() => setSleep(v)}
+                            className={`flex-1 h-9 rounded-lg text-xs font-semibold transition-all ${
+                              sleep >= v
+                                ? "bg-indigo-500 text-white shadow-sm"
+                                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            }`}
+                          >
+                            {v}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Note */}
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Anything on your mind? (optional)"
+                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm resize-none h-12 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                  />
+
+                  {/* Quick wellness access */}
                   <div className="flex gap-2 justify-center">
-                    {MOODS.map((m) => (
-                      <button
-                        key={m.value}
-                        onClick={() => setMood(m.value)}
-                        className={`text-2xl p-2 rounded-xl transition-all ${
-                          mood === m.value
-                            ? "bg-primary/15 scale-110 ring-2 ring-primary/30"
-                            : "hover:bg-accent"
-                        }`}
-                      >
-                        {m.emoji}
-                      </button>
-                    ))}
+                    <button
+                      onClick={() => { setBookingCategory("calm"); setActiveTab("book"); }}
+                      className="text-[10px] px-2.5 py-1 rounded-full bg-green-500/10 text-green-600 font-medium hover:bg-green-500/20 transition-all"
+                    >
+                      Calm Down
+                    </button>
+                    <button
+                      onClick={() => { setBookingCategory("energize"); setActiveTab("book"); }}
+                      className="text-[10px] px-2.5 py-1 rounded-full bg-orange-500/10 text-orange-600 font-medium hover:bg-orange-500/20 transition-all"
+                    >
+                      Energize
+                    </button>
+                    <button
+                      onClick={() => { setBookingCategory("focus"); setActiveTab("book"); }}
+                      className="text-[10px] px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-600 font-medium hover:bg-purple-500/20 transition-all"
+                    >
+                      Focus Prep
+                    </button>
+                    <button
+                      onClick={() => { setBookingCategory("recover"); setActiveTab("book"); }}
+                      className="text-[10px] px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 font-medium hover:bg-rose-500/20 transition-all"
+                    >
+                      Recovery
+                    </button>
+                  </div>
+
+                  {/* Submit */}
+                  <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="h-11 px-3 text-xs text-muted-foreground shrink-0"
+                    onClick={handleQuickDemo}
+                    disabled={loading}
+                    title="Fill random check-in for demo"
+                  >
+                    🎲 Demo
+                  </Button>
+                  <Button
+                    className={`flex-1 h-11 font-semibold transition-all ${
+                      xrayMode
+                        ? "bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white shadow-md"
+                        : ""
+                    }`}
+                    variant={xrayMode ? "default" : "chat"}
+                    disabled={mood === null || loading}
+                    onClick={handleSubmitCheckIn}
+                  >
+                    {xrayMode ? (
+                      <><Scan className="h-4 w-4 mr-2" /> {loading ? "Comparing..." : "Compare Both Models"}</>
+                    ) : (
+                      <><Send className="h-4 w-4 mr-2" /> {loading ? "Sending..." : "Submit Check-In"}</>
+                    )}
+                  </Button>
                   </div>
                 </div>
-
-                {/* Energy & Sleep */}
-                <div className="flex gap-6 justify-center">
-                  <div className="text-center">
-                    <p className="text-xs text-muted-foreground mb-1 font-medium">⚡ Energy</p>
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((v) => (
-                        <button
-                          key={v}
-                          onClick={() => setEnergy(v)}
-                          className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all ${
-                            energy >= v
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {v}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-muted-foreground mb-1 font-medium">💤 Sleep</p>
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((v) => (
-                        <button
-                          key={v}
-                          onClick={() => setSleep(v)}
-                          className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all ${
-                            sleep >= v
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {v}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Note */}
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Anything on your mind? (optional)"
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-background text-foreground text-sm resize-none h-14 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-
-                <Button
-                  variant="chat"
-                  className="w-full"
-                  disabled={mood === null || loading}
-                  onClick={handleSubmitCheckIn}
-                >
-                  <Send className="h-4 w-4 mr-2" /> {loading ? "Sending..." : "Submit Check-In"}
-                </Button>
-
-                <p className="text-xs text-muted-foreground text-center">
-                  🔒 Your data stays with you. Employers only see anonymous team aggregates.
-                </p>
               </div>
             </>
+          ) : activeTab === "insights" ? (
+            <WellnessHub
+              history={history}
+              baseline={baseline}
+              insightText={insightText}
+              insightLoading={insightLoading}
+              onBookActivity={(cat) => { setBookingCategory(cat); setActiveTab("book"); }}
+              onLoadInsights={loadInsights}
+              section="analytics"
+            />
+          ) : activeTab === "lab" ? (
+            <WellnessHub
+              history={history}
+              baseline={baseline}
+              insightText={insightText}
+              insightLoading={insightLoading}
+              onBookActivity={(cat) => { setBookingCategory(cat); setActiveTab("book"); }}
+              onLoadInsights={loadInsights}
+              section="protocols"
+            />
           ) : (
-            /* Insights tab */
-            <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
-              <div className="rounded-2xl bg-card border border-border p-5 space-y-3">
-                <h3 className="font-semibold text-foreground">Your Wellness Insights</h3>
-                {insightLoading ? (
-                  <p className="text-sm text-muted-foreground animate-pulse">Analyzing your patterns...</p>
-                ) : (
-                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{insightText}</p>
-                )}
-                {baseline && (
-                  <div className="pt-2">
-                    <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 text-xs font-medium">
-                      Baseline: mood {baseline.mood} · energy {baseline.energy} · sleep {baseline.sleep}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground text-center">
-                {history.length} check-ins recorded
-              </p>
+            /* Book tab — inline activities */
+            <div className="flex-1 overflow-y-auto">
+              <BookingInline
+                recommended={bookingCategory}
+                onBook={() => {}}
+              />
             </div>
           )}
         </div>
@@ -467,20 +783,23 @@ const Chat = () => {
         {showHistory && (
           <div className="w-72 border-l bg-card overflow-y-auto shrink-0 hidden md:block">
             <div className="flex items-center justify-between px-4 py-3 border-b">
-              <h3 className="font-semibold text-sm text-foreground">Check-In History</h3>
-              <Button variant="ghost" size="icon" onClick={() => setShowHistory(false)}>
+              <h3 className="font-semibold text-sm text-foreground">History</h3>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowHistory(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
             <div className="p-3 space-y-2">
               {[...history].reverse().slice(0, 14).map((c) => (
-                <div key={c.id} className="bg-muted rounded-lg p-3 text-xs space-y-1">
+                <div key={c.id} className="bg-muted/50 rounded-xl p-3 text-xs space-y-1.5 border border-border/50">
                   <p className="font-medium text-foreground">
-                    {new Date(c.created_at).toLocaleDateString()}
+                    {new Date(c.created_at).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                   </p>
-                  <p className="text-muted-foreground">
-                    Mood: {c.mood}/5 · Energy: {c.energy}/5 · Sleep: {c.sleep}/5
-                  </p>
+                  <div className="flex gap-3 text-muted-foreground">
+                    <span>{MOODS[Math.min(c.mood, 5) - 1]?.emoji} {c.mood}</span>
+                    <span>Zap {c.energy}</span>
+                    <span>Sleep {c.sleep}</span>
+                  </div>
+                  {c.note && <p className="text-muted-foreground italic">"{c.note}"</p>}
                 </div>
               ))}
               {history.length === 0 && (
@@ -491,7 +810,29 @@ const Chat = () => {
         )}
       </div>
 
-      <BookingModal open={showBooking} onClose={() => setShowBooking(false)} />
+      {/* Footer — Partner Logos */}
+      <div className="border-t bg-card/50 px-4 py-2 shrink-0">
+        <div className="flex items-center justify-center gap-6 opacity-35 hover:opacity-55 transition-opacity">
+          <div className="flex items-center gap-1">
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9v-2h2v2zm0-4H9V7h2v5zm4 4h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
+            <span className="text-[9px] font-semibold text-muted-foreground">Podman</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor"><path d="M16.009 13.386c1.577 0 3.86-.326 3.86-2.202a1.86 1.86 0 0 0-.07-.479l-.86-3.596c-.165-.73-.384-1.07-1.36-1.554-.766-.384-2.448-1.2-2.86-1.2-.384 0-.498.481-1.2.481-.673 0-1.176-.576-1.855-.576-.652 0-1.073.384-1.4 1.17 0 0-1.003 2.813-1.073 3.046a.464.464 0 0 0-.028.165c0 1.176 4.26 2.746 6.845 2.746zM21.85 13.163c.137.576.206 1.002.206 1.372 0 1.81-1.84 2.82-4.26 2.82-4.645 0-9.468-2.758-9.468-5.135a2.2 2.2 0 0 1 .178-.862C5.6 11.468 3.4 12.153 3.4 14.06c0 3.18 5.94 5.588 11.46 5.588 4.14 0 6.78-1.32 6.78-3.72 0-1.29-.84-2.01-1.79-2.766z"/></svg>
+            <span className="text-[9px] font-semibold text-muted-foreground">Red Hat</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-xs">🦙</span>
+            <span className="text-[9px] font-semibold text-muted-foreground">RamaLama</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            <span className="text-[9px] font-semibold text-muted-foreground">IBM Granite</span>
+          </div>
+        </div>
+      </div>
+
+      <BookingModal open={showBooking} onClose={() => setShowBooking(false)} recommended={bookingCategory} />
     </div>
   );
 };

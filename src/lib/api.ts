@@ -34,3 +34,28 @@ export async function getHistory(userId: string) {
   const res = await fetch(`${API_BASE}/api/history/${userId}`);
   return res.json();
 }
+
+export async function compareCheckin(
+  userId: string,
+  mood: number,
+  energy: number,
+  sleep: number,
+  note?: string
+) {
+  const res = await fetch(`${API_BASE}/api/checkin/compare`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, mood, energy, sleep, note }),
+  });
+  return res.json();
+}
+
+export async function getDashboard() {
+  const res = await fetch(`${API_BASE}/api/dashboard`);
+  return res.json();
+}
+
+export async function seedDemo() {
+  const res = await fetch(`${API_BASE}/api/seed-demo`, { method: "POST" });
+  return res.json();
+}

@@ -1,12 +1,14 @@
 import os
+import time
 from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from app.database import init_db, create_user, get_user, add_checkin, get_checkins, get_baseline, detect_drift
+from app.database import init_db, create_user, get_user, add_checkin, get_checkins, get_baseline, detect_drift, get_dashboard_aggregates
 from app.shield import generate_checkin_response, generate_insight
+from app.seed_demo import seed_demo_data
 
 app = FastAPI(title="YU Shield", description="AI Wellness Companion for Employees")
 
@@ -75,6 +77,59 @@ def do_checkin(data: CheckIn):
     }
 
 
+@app.post("/api/checkin/compare")
+def do_checkin_compare(data: CheckIn):
+    """X-Ray Mode: run the same check-in through both providers and compare."""
+    user = get_user(data.user_id)
+    if not user:
+        return {"error": "User not found. Register first."}
+
+    add_checkin(data.user_id, data.mood, data.energy, data.sleep, data.note)
+
+    baseline = get_baseline(data.user_id)
+    drift = detect_drift(data.user_id)
+
+    checkin_dict = {"mood": data.mood, "energy": data.energy, "sleep": data.sleep, "note": data.note}
+
+    # --- Local (RamaLama) ---
+    try:
+        t0 = time.perf_counter()
+        local_response = generate_checkin_response(
+            first_name=user["first_name"],
+            checkin=checkin_dict,
+            baseline=baseline,
+            drift=drift,
+            provider="ramalama",
+        )
+        local_ms = round((time.perf_counter() - t0) * 1000)
+        local_result = {"response": local_response, "time_ms": local_ms, "provider": "ramalama", "model": "Granite 3.3 8B"}
+    except Exception:
+        local_result = {"response": "Provider unavailable", "time_ms": 0, "provider": "ramalama", "model": "Granite 3.3 8B", "error": True}
+
+    # --- Cloud (Claude) ---
+    try:
+        t0 = time.perf_counter()
+        cloud_response = generate_checkin_response(
+            first_name=user["first_name"],
+            checkin=checkin_dict,
+            baseline=baseline,
+            drift=drift,
+            provider="claude",
+        )
+        cloud_ms = round((time.perf_counter() - t0) * 1000)
+        cloud_result = {"response": cloud_response, "time_ms": cloud_ms, "provider": "claude", "model": "Claude Sonnet"}
+    except Exception:
+        cloud_result = {"response": "Provider unavailable", "time_ms": 0, "provider": "claude", "model": "Claude Sonnet", "error": True}
+
+    return {
+        "status": "ok",
+        "local": local_result,
+        "cloud": cloud_result,
+        "baseline": baseline,
+        "drift": drift,
+    }
+
+
 @app.get("/api/insights/{user_id}")
 def get_insights(user_id: str, provider: str = "ramalama"):
     user = get_user(user_id)
@@ -115,6 +170,17 @@ def get_history(user_id: str):
         "baseline": baseline,
         "total": len(checkins),
     }
+
+
+@app.get("/api/dashboard")
+def dashboard():
+    return get_dashboard_aggregates()
+
+
+@app.post("/api/seed-demo")
+def api_seed_demo():
+    seed_demo_data()
+    return {"status": "ok", "message": "Demo data loaded"}
 
 
 # --- Frontend ---

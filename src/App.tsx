@@ -7,6 +7,7 @@ import Landing from "./pages/Landing";
 import Chat from "./pages/Chat";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
+import MCPPlayground from "./pages/MCPPlayground";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,7 @@ const App = () => (
           <Route path="/" element={<Landing />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/mcp" element={<MCPPlayground />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

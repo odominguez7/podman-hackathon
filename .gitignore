@@ -23,3 +23,9 @@ Thumbs.db
 
 # Containers
 *.tar
+
+# Database
+*.db
+
+# Scripts
+serve-model.sh

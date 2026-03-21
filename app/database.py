@@ -127,3 +127,61 @@ def detect_drift(user_id: str) -> Optional[dict]:
         alerts.append({"metric": "sleep", "baseline": baseline["sleep"], "recent": avg_sleep})
 
     return {"alerts": alerts, "baseline": baseline, "recent_avg": {"mood": avg_mood, "energy": avg_energy, "sleep": avg_sleep}} if alerts else None
+
+
+def get_dashboard_aggregates() -> dict:
+    """Aggregate dashboard stats across all users."""
+    conn = get_db()
+    cutoff = (datetime.now() - timedelta(days=14)).isoformat()
+
+    # Total unique users
+    total_users = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+
+    # Users with at least one check-in in last 14 days
+    active_users = conn.execute(
+        "SELECT COUNT(DISTINCT user_id) FROM checkins WHERE created_at >= ?",
+        (cutoff,),
+    ).fetchone()[0]
+
+    participation_rate = round(active_users / total_users, 2) if total_users > 0 else 0.0
+
+    # Drift alerts: count users who currently have active drift
+    all_user_ids = [
+        row[0] for row in conn.execute("SELECT id FROM users").fetchall()
+    ]
+    conn.close()
+
+    drift_alerts = 0
+    for uid in all_user_ids:
+        if detect_drift(uid) is not None:
+            drift_alerts += 1
+
+    # Daily averages for last 14 days
+    conn = get_db()
+    rows = conn.execute(
+        """
+        SELECT DATE(created_at) as day,
+               ROUND(AVG(mood), 1) as mood,
+               ROUND(AVG(energy), 1) as energy,
+               ROUND(AVG(sleep), 1) as sleep
+        FROM checkins
+        WHERE created_at >= ?
+        GROUP BY DATE(created_at)
+        ORDER BY day
+        """,
+        (cutoff,),
+    ).fetchall()
+    conn.close()
+
+    daily_trends = [
+        {"date": r["day"], "mood": r["mood"], "energy": r["energy"], "sleep": r["sleep"]}
+        for r in rows
+    ]
+
+    return {
+        "total_users": total_users,
+        "active_users": active_users,
+        "participation_rate": participation_rate,
+        "drift_alerts": drift_alerts,
+        "daily_trends": daily_trends,
+    }

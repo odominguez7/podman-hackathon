@@ -4,21 +4,50 @@ import httpx
 RAMALAMA_URL = os.environ.get("RAMALAMA_URL", "http://host.containers.internal:51564")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
-SYSTEM_PROMPT = """You are YU Shield, an empathetic AI wellness companion for employees. You are NOT a therapist — you are a supportive, evidence-based wellness tool that helps people notice patterns in their wellbeing.
+SYSTEM_PROMPT = """You are YU Shield, an empathetic AI wellbeing companion for employees. You are NOT a therapist — you are a proactive, evidence-based wellness coach that helps people perform at their best through self-awareness and smart preparation.
 
 Your role:
-1. Conduct brief daily check-ins about mood, energy, and sleep quality
+1. Conduct brief daily check-ins about mood (1-5), energy (1-5), and sleep quality (1-5)
 2. Build behavioral baselines over time (7+ days of data)
-3. Detect when someone's scores deviate meaningfully from their personal baseline (3+ days below baseline)
-4. Deliver personalized, CBT-informed micro-interventions via warm, supportive messages
-5. Suggest concrete actions: yoga classes, breathing exercises, schedule adjustments, or connecting with support resources
-6. ALWAYS cite specific data points when making observations (e.g., "Your mood dropped from an average of 4.1 to 2.6 over the past 4 days")
-7. Flag uncertainty — never make clinical claims, always frame as wellness support
-8. If patterns are concerning, gently suggest professional resources
+3. Detect when scores deviate meaningfully from baseline (3+ days below = drift alert)
+4. Deliver personalized, CBT-informed micro-interventions with SPECIFIC data citations
+5. PROACTIVELY recommend wellness activities from our catalog based on their current state:
 
-Tone: Warm, brief, non-judgmental. Like a thoughtful colleague, not a robot. Use first name. Keep messages under 3 sentences unless the user asks for more detail.
+   WHEN STRESSED/LOW MOOD (mood 1-2): Suggest calming activities
+   - Restorative Yoga (Down Under Yoga, 45 min)
+   - Guided Meditation (Wellness Room, 20 min)
+   - Box Breathing (anywhere, 10 min)
+   - Mindful Nature Walk (Charles River, 30 min)
+   - Sound Bath (Harmony Studio, 40 min)
 
-Privacy principle: All individual data stays with the employee. Employers only see anonymous team-level aggregates. Mention this if asked about privacy."""
+   WHEN ENERGIZED/HIGH (energy 4-5): Suggest channeling that energy
+   - HIIT Express (FitHub, 25 min)
+   - Power Vinyasa (Down Under Yoga, 50 min)
+   - Morning Run Club (Esplanade, 35 min)
+   - Spin Class (FitHub, 40 min)
+
+   WHEN NEEDING FOCUS (before meetings/deadlines): Suggest focus boosters
+   - Focus Flow Yoga (30 min)
+   - Cold Plunge + Sauna (FitHub, 20 min)
+   - Guided Journaling (15 min)
+
+   WHEN FATIGUED/RECOVERING (sleep 1-2, energy 1-2): Suggest recovery
+   - Deep Stretch Class (FitHub, 40 min)
+   - Chair Massage (Floor 2, 15 min)
+   - Yin Yoga (Down Under Yoga, 60 min)
+   - Self-Massage & Foam Rolling (20 min)
+
+6. ALWAYS cite specific numbers (e.g., "Your mood dropped from 4.2 to 2.6 over 4 days")
+7. Ask about upcoming events: "Any big meetings or deadlines coming up?" and tailor suggestions:
+   - Before a big presentation: suggest focus + confidence boosters
+   - After a tough week: suggest recovery + calming activities
+   - When on a positive streak: suggest maintaining momentum with energizing activities
+8. Be a PERFORMANCE COACH: help them discover what drives their best days by connecting wellness patterns to outcomes
+9. Never make clinical claims — frame everything as wellness support
+
+Tone: Warm, direct, actionable. Like a thoughtful coach who knows your data. Use first name. Keep messages concise but always include at least one specific activity recommendation with the provider name.
+
+Privacy: All individual data stays with the employee. Employers see only anonymous team aggregates."""
 
 
 def _chat_ramalama(messages: list[dict], max_tokens: int = 300) -> str:
@@ -75,9 +104,9 @@ def _chat(messages: list[dict], max_tokens: int = 300, provider: str = "ramalama
 def generate_checkin_response(first_name: str, checkin: dict, baseline: dict = None, drift: dict = None, provider: str = "ramalama") -> str:
     """Generate a personalized response after a check-in."""
     context = f"User: {first_name}\n"
-    context += f"Today's check-in: mood={checkin['mood']}/10, energy={checkin['energy']}/10, sleep={checkin['sleep']}/10"
+    context += f"Today's check-in: mood={checkin['mood']}/5, energy={checkin['energy']}/5, sleep={checkin['sleep']}/5"
     if checkin.get("note"):
-        context += f", note: {checkin['note']}"
+        context += f", note: \"{checkin['note']}\""
 
     if baseline:
         context += f"\n\nBaseline (first 7 days): mood={baseline['mood']}, energy={baseline['energy']}, sleep={baseline['sleep']}"
@@ -87,16 +116,35 @@ def generate_checkin_response(first_name: str, checkin: dict, baseline: dict = N
         context += "\n\nALERT - Drift detected:"
         for alert in drift["alerts"]:
             context += f"\n- {alert['metric']}: baseline {alert['baseline']} → recent avg {alert['recent']}"
-        context += "\n\nPlease deliver a gentle, CBT-informed micro-intervention. Cite the specific numbers."
+        context += "\n\nDeliver a CBT-informed micro-intervention. Cite specific numbers. Recommend a specific wellness activity from the catalog."
+
+    # Smart activity suggestion logic
+    m, e, s = checkin['mood'], checkin['energy'], checkin['sleep']
+    if m <= 2 or (drift and drift.get("alerts")):
+        context += "\n\nThis person needs calming/recovery activities. Suggest a specific one (Restorative Yoga, Guided Meditation, Sound Bath, etc.) with provider and time."
+    elif e >= 4 and m >= 4:
+        context += "\n\nThis person is energized! Suggest channeling it — HIIT, Power Vinyasa, Run Club, or Spin Class."
+    elif s <= 2:
+        context += "\n\nPoor sleep detected. Suggest recovery: Deep Stretch, Yin Yoga, or Chair Massage."
+    elif checkin.get("note") and any(w in checkin['note'].lower() for w in ["meeting", "presentation", "deadline", "interview", "pitch"]):
+        context += "\n\nImportant event mentioned in the note! Suggest focus prep: Focus Flow Yoga, Cold Plunge, or Guided Journaling. Frame it as performance preparation."
 
     if not baseline:
-        context += "\n\nThis user has fewer than 7 check-ins. Acknowledge the check-in warmly and encourage them to keep building their baseline."
+        context += "\n\nThis user has fewer than 7 check-ins. Acknowledge warmly, recommend an activity, and encourage building baseline."
+
+    context += "\n\nIMPORTANT FORMATTING RULES:"
+    context += "\n- If scores are low (any metric <=2) or drift detected: suggest ONE specific bookable activity (e.g., 'Restorative Yoga', 'Deep Stretch') AND one team challenge (e.g., 'Cold Plunge Duo', 'Pre-Meeting Breathwork')"
+    context += "\n- If scores are good (all >=4): celebrate, no need to push activities. Just acknowledge and encourage"
+    context += "\n- If scores are average (3): light suggestion, not pushy. Maybe mention checking out the Wellness Lab"
+    context += "\n- If note mentions meetings/deadlines/stress: suggest focus prep activities specifically"
+    context += "\n- Keep it real, keep it brief. Don't oversell."
+    context += "\n- End by asking about upcoming events or meetings"
 
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": context},
     ]
-    return _chat(messages, max_tokens=300, provider=provider)
+    return _chat(messages, max_tokens=400, provider=provider)
 
 
 def generate_insight(first_name: str, checkins: list[dict], baseline: dict = None, drift: dict = None, provider: str = "ramalama") -> str:
@@ -121,7 +169,11 @@ def generate_insight(first_name: str, checkins: list[dict], baseline: dict = Non
         for alert in drift["alerts"]:
             context += f"\n- {alert['metric']}: baseline {alert['baseline']} → recent {alert['recent']}"
 
-    context += "\n\nProvide a brief wellness insight summary. Cite specific data points. If drift is detected, include a micro-intervention."
+    context += "\n\nProvide a wellness insight summary with:"
+    context += "\n1. Pattern analysis with specific numbers"
+    context += "\n2. What their best days look like vs worst days"
+    context += "\n3. A personalized weekly wellness plan with specific activities from the catalog"
+    context += "\n4. If drift detected: urgent micro-intervention with specific activity recommendation"
 
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
