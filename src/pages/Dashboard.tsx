@@ -489,58 +489,105 @@ const Dashboard = () => {
             </div>
 
             {/* Team Member Status — Manager View */}
-            {team.length > 0 && (
-              <Card className="shadow-sm">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <UserCheck className="h-5 w-5 text-primary" />
-                      <CardTitle className="text-base">Team Wellness Status</CardTitle>
+            {team.length > 0 && (() => {
+              const needsSupport = team.filter(m => m.status === "alert");
+              const thriving = team.filter(m => m.status === "stable");
+              const notChecking = team.filter(m => m.status === "inactive");
+
+              const ScoreBar = ({ value }: { value: number | null }) => {
+                if (!value) return <span className="text-[10px] text-muted-foreground">—</span>;
+                const pct = (value / 5) * 100;
+                const color = value >= 4 ? "bg-green-500" : value >= 3 ? "bg-amber-400" : "bg-red-400";
+                return (
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="text-[10px] text-muted-foreground bg-muted px-2 py-1 rounded-full">First name only · No personal data</span>
+                    <span className="text-[10px] font-mono text-muted-foreground">{value}</span>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {team.map((member, i) => (
-                      <div
-                        key={i}
-                        className={`rounded-2xl p-4 space-y-2 border ${
-                          member.status === "alert"
-                            ? "bg-amber-50/50 dark:bg-amber-950/20 border-amber-500/30"
-                            : member.status === "inactive"
-                            ? "bg-muted/30 border-border"
-                            : "bg-green-50/30 dark:bg-green-950/10 border-green-500/20"
-                        }`}
-                      >
+                );
+              };
+
+              const MemberRow = ({ member, index }: { member: TeamMember; index: number }) => (
+                <div className="flex items-center gap-4 py-2.5 border-b border-border/50 last:border-0">
+                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
+                    <span className="text-[10px] font-bold text-muted-foreground">#{index + 1}</span>
+                  </div>
+                  <div className="flex-1 grid grid-cols-3 gap-4 items-center">
+                    <div className="space-y-0.5">
+                      <p className="text-[10px] text-muted-foreground">Mood</p>
+                      <ScoreBar value={member.latest_mood} />
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-[10px] text-muted-foreground">Energy</p>
+                      <ScoreBar value={member.latest_energy} />
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-[10px] text-muted-foreground">Sleep</p>
+                      <ScoreBar value={member.latest_sleep} />
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground shrink-0">{member.checkins_7d}d</span>
+                </div>
+              );
+
+              return (
+                <div className="space-y-4">
+                  {/* Needs Support */}
+                  {needsSupport.length > 0 && (
+                    <Card className="shadow-sm border-amber-500/30 bg-amber-50/20 dark:bg-amber-950/10">
+                      <CardHeader className="pb-2 pt-4 px-5">
                         <div className="flex items-center justify-between">
-                          <p className="text-xs font-semibold text-muted-foreground">Member {i + 1}</p>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                            member.status === "alert"
-                              ? "bg-amber-500/20 text-amber-700"
-                              : member.status === "inactive"
-                              ? "bg-muted text-muted-foreground"
-                              : "bg-green-500/20 text-green-700"
-                          }`}>
-                            {member.status === "alert" ? "⚠ DRIFT" : member.status === "inactive" ? "INACTIVE" : "✓ STABLE"}
-                          </span>
-                        </div>
-                        {member.latest_mood !== null ? (
-                          <div className="flex gap-2 text-[10px] text-muted-foreground">
-                            <span>😊 {member.latest_mood}</span>
-                            <span>⚡ {member.latest_energy}</span>
-                            <span>🌙 {member.latest_sleep}</span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                            <p className="font-semibold text-sm text-amber-700 dark:text-amber-400">Needs Support — {needsSupport.length} {needsSupport.length === 1 ? "member" : "members"}</p>
                           </div>
-                        ) : (
-                          <p className="text-[10px] text-muted-foreground">No check-ins yet</p>
-                        )}
-                        <p className="text-[10px] text-muted-foreground">{member.checkins_7d} check-ins (7d)</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                          <span className="text-[10px] text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full">Sustained decline detected · Consider reaching out</span>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="px-5 pb-4">
+                        {needsSupport.map((m, i) => <MemberRow key={i} member={m} index={i} />)}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Thriving */}
+                  {thriving.length > 0 && (
+                    <Card className="shadow-sm border-green-500/20">
+                      <CardHeader className="pb-2 pt-4 px-5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-green-500" />
+                          <p className="font-semibold text-sm text-foreground">Doing Well — {thriving.length} {thriving.length === 1 ? "member" : "members"}</p>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="px-5 pb-4">
+                        {thriving.map((m, i) => <MemberRow key={i} member={m} index={i} />)}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Not Checking In */}
+                  {notChecking.length > 0 && (
+                    <Card className="shadow-sm border-border bg-muted/10">
+                      <CardHeader className="pb-2 pt-4 px-5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                            <p className="font-semibold text-sm text-muted-foreground">Not Checking In — {notChecking.length} {notChecking.length === 1 ? "member" : "members"}</p>
+                          </div>
+                          <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Encourage participation</span>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="px-5 pb-4">
+                        {notChecking.map((m, i) => <MemberRow key={i} member={m} index={i} />)}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <p className="text-[10px] text-muted-foreground text-center">All data is anonymous · No names · No personal notes · Aggregated scores only</p>
+                </div>
+              );
+            })()}
 
             {/* Privacy Commitment */}
             <div className="rounded-3xl bg-gradient-to-r from-primary/5 via-transparent to-primary/5 border border-primary/10 p-8">
