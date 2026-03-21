@@ -32,7 +32,6 @@ interface DashboardData {
 }
 
 interface TeamMember {
-  first_name: string;
   status: "alert" | "stable" | "inactive";
   checkins_7d: number;
   latest_mood: number | null;
@@ -162,7 +161,7 @@ const Dashboard = () => {
           </div>
           <p className="text-xs text-muted-foreground">
             All data is <span className="font-semibold text-foreground">100% anonymous</span>. No individual names, no personal data, no tracking.
-            Only aggregated team wellness trends. We never share individual employee information — period.
+            Aggregated team trends only. Built for HIPAA-sensitive and regulated environments. AI runs locally via Podman.
           </p>
         </div>
       </div>
