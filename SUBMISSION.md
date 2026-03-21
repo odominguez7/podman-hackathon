@@ -59,4 +59,6 @@ podman run -p 8000:8000 docker.io/odominguez7/yu-shield:latest
 ```
 
 ## About the Builder
+**Omar Dominguez** · MIT · omar7@mit.edu
+
 I lost 80 lbs, ran the Boston Marathon, and finished Ironman 70.3. Not because I had perfect conditions, but because I learned to protect my energy before everything else. YU Shield exists because the people who depend on you need you at your best.
