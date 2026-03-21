@@ -315,7 +315,9 @@ YU Shield was designed with the hackathon's ethics criteria in mind:
 
 ## About the Builder
 
-**Omar Dominguez** spent 11 years managing capacity in manufacturing before MIT. He lost 80 lbs starting with 7 minutes a day, ran the Boston Marathon, and finished Ironman 70.3. YU Shield exists because taking care of yourself is not selfish. It is one of the best ways to take care of the people who depend on you.
+I lost 80 lbs, ran the Boston Marathon, and finished Ironman 70.3. Not because I had perfect conditions, but because I learned to protect my energy before everything else.
+
+YU Shield exists because the people who depend on you need you at your best.
 
 ---
 
