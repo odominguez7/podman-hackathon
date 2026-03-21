@@ -43,25 +43,20 @@ const TOOLS: MCPTool[] = [
       { name: "energy", type: "number", placeholder: "1-5", required: true },
       { name: "sleep", type: "number", placeholder: "1-5", required: true },
     ],
-    endpoint: "/api/checkin",
+    endpoint: "/api/mcp/recommendations",
     method: "POST",
-    buildRequest: (p) => {
-      // Simulate MCP recommendation logic locally
-      const mood = parseInt(p.mood) || 3;
-      const energy = parseInt(p.energy) || 3;
-      const sleep = parseInt(p.sleep) || 3;
-      const recs: string[] = [];
-      if (mood <= 2) recs.push("Restorative Yoga (Down Under Yoga, 45 min)", "Guided Meditation (Wellness Room, 20 min)", "Box Breathing (Anywhere, 10 min)");
-      if (energy >= 4 && mood >= 3) recs.push("HIIT Express (FitHub, 25 min)", "Power Vinyasa (Down Under Yoga, 50 min)");
-      if (energy <= 2) recs.push("Deep Stretch Class (FitHub, 40 min)", "Chair Massage (Floor 2, 15 min)");
-      if (sleep <= 2) recs.push("Yin Yoga (Down Under Yoga, 60 min)", "Self-Massage & Foam Rolling (Anywhere, 20 min)");
-      if (mood >= 3 && mood <= 4 && energy >= 3 && energy <= 4 && sleep >= 3) recs.push("Focus Flow Yoga (Down Under Yoga, 30 min)", "Cold Plunge + Sauna (FitHub, 20 min)");
-      if (recs.length === 0) recs.push("Focus Flow Yoga (Down Under Yoga, 30 min)", "Morning Run Club (Esplanade, 35 min)", "Mindful Nature Walk (Charles River, 30 min)");
-      return {
-        url: "local://mcp",
-        options: { method: "LOCAL", body: JSON.stringify({ recommendations: recs, input: { mood, energy, sleep } }) },
-      };
-    },
+    buildRequest: (p) => ({
+      url: `${API_BASE}/api/mcp/recommendations`,
+      options: {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mood: parseInt(p.mood) || 3,
+          energy: parseInt(p.energy) || 3,
+          sleep: parseInt(p.sleep) || 3,
+        }),
+      },
+    }),
   },
   {
     id: "book-activity",
@@ -71,19 +66,14 @@ const TOOLS: MCPTool[] = [
       { name: "user_id", type: "text", placeholder: "e.g. sarah-demo", required: true },
       { name: "activity", type: "text", placeholder: "e.g. Restorative Yoga", required: true },
     ],
-    endpoint: "/api/book",
+    endpoint: "/api/mcp/book",
     method: "POST",
     buildRequest: (p) => ({
-      url: "local://mcp",
+      url: `${API_BASE}/api/mcp/book`,
       options: {
-        method: "LOCAL",
-        body: JSON.stringify({
-          status: "confirmed",
-          booking_id: `YU-${(p.user_id || "DEMO").slice(0, 4).toUpperCase()}-${Math.floor(Math.random() * 99999)}`,
-          user_id: p.user_id,
-          activity: p.activity,
-          message: `Booked ${p.activity} for ${p.user_id}. See you there!`,
-        }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: p.user_id, activity: p.activity }),
       },
     }),
   },

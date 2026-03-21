@@ -268,7 +268,7 @@ const Dashboard = () => {
                 <CardContent className="pt-5 pb-4">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      data.drift_alerts > 0 ? "bg-amber-500/10" : "bg-green-500/10"
+                      data.drift_alerts > 0 ? "bg-amber-500/10 animate-pulse" : "bg-green-500/10"
                     }`}>
                       {data.drift_alerts > 0
                         ? <AlertTriangle className="h-5 w-5 text-amber-600" />

@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  yu-shield:
+    build: .
+    image: yu-shield:latest
+    container_name: yu-shield
+    ports:
+      - "8000:8000"
+    environment:
+      - RAMALAMA_URL=http://host.containers.internal:51564
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - YU_DB_PATH=/data/yu_shield.db
+    volumes:
+      - yu-data:/data
+    restart: unless-stopped
+
+volumes:
+  yu-data:

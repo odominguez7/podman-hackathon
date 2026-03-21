@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Shield, ChevronLeft, History, Send, X, BarChart3, Scan, Lock, Cloud, LogOut, Zap, Moon, Timer } from "lucide-react";
+import { Shield, ChevronLeft, History, Send, X, BarChart3, Scan, Lock, Cloud, LogOut, Zap, Moon, Timer, Database } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { submitCheckin, getHistory, getInsights, registerUser, compareCheckin } from "@/lib/api";
+import { submitCheckin, getHistory, getInsights, registerUser, compareCheckin, seedDemo } from "@/lib/api";
+import { toast } from "sonner";
 import BookingModal from "@/components/BookingModal";
 import WellnessHub from "@/components/WellnessHub";
 import BookingInline from "@/components/BookingInline";
@@ -57,6 +58,7 @@ const Chat = () => {
   // UI state
   const [showHistory, setShowHistory] = useState(false);
   const [showBooking, setShowBooking] = useState(false);
+  const [seeding, setSeeding] = useState(false);
   const [bookingCategory, setBookingCategory] = useState<string>("calm");
   const [loading, setLoading] = useState(false);
   const [provider, setProvider] = useState<string>(localStorage.getItem("yu_provider") || "ramalama");
@@ -127,6 +129,18 @@ const Chat = () => {
     localStorage.setItem("yu_first_name", name);
     await registerUser(id, name);
     setRegistered(true);
+  };
+
+  const handleSeedDemo = async () => {
+    setSeeding(true);
+    try {
+      await seedDemo();
+      toast.success("Demo data loaded!", { description: "4 users with 14 days of check-ins ready." });
+      loadHistory();
+    } catch {
+      toast.error("Failed to load demo data");
+    }
+    setSeeding(false);
   };
 
   const handleLogout = () => {
@@ -242,7 +256,9 @@ const Chat = () => {
       }
 
       loadHistory();
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Connection failed";
+      toast.error("Wellness engine unavailable", { description: msg });
       setMessages((prev) => [
         ...prev,
         {
@@ -361,6 +377,9 @@ const Chat = () => {
           )}
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowHistory(!showHistory)}>
             <History className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={handleSeedDemo} disabled={seeding} title="Load demo data">
+            <Database className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={handleLogout} title="Logout">
             <LogOut className="h-4 w-4" />

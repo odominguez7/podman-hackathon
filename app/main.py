@@ -177,6 +177,31 @@ def dashboard():
     return get_dashboard_aggregates()
 
 
+class RecommendationsRequest(BaseModel):
+    mood: int = Field(ge=1, le=5)
+    energy: int = Field(ge=1, le=5)
+    sleep: int = Field(ge=1, le=5)
+
+
+class BookingRequest(BaseModel):
+    user_id: str
+    activity: str
+
+
+@app.post("/api/mcp/recommendations")
+def mcp_recommendations(data: RecommendationsRequest):
+    """MCP Tool: get activity recommendations based on wellness scores."""
+    from app.mcp_server import get_wellness_recommendations
+    return get_wellness_recommendations(data.mood, data.energy, data.sleep)
+
+
+@app.post("/api/mcp/book")
+def mcp_book(data: BookingRequest):
+    """MCP Tool: book a wellness activity for a user."""
+    from app.mcp_server import book_wellness_activity
+    return book_wellness_activity(data.user_id, data.activity)
+
+
 @app.post("/api/seed-demo")
 def api_seed_demo():
     seed_demo_data()
