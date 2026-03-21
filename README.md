@@ -324,7 +324,7 @@ YU Shield exists because the people who depend on you need you at your best.
 <p align="center">
   <strong>Pods, Prompts & Prototypes 2026</strong><br/>
   <sub>The Open Accelerator, Fort Point, Boston</sub><br/>
-  <sub>Omar Dominguez · MIT · omar7@mit.edu</sub>
+  <sub>Omar Dominguez · MIT Sloan Fellow MBA · omar7@mit.edu</sub>
 </p>
 
 <p align="center">
