@@ -514,7 +514,7 @@ const Dashboard = () => {
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <p className="font-semibold text-sm text-foreground">{member.first_name}</p>
+                          <p className="text-xs font-semibold text-muted-foreground">Member {i + 1}</p>
                           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
                             member.status === "alert"
                               ? "bg-amber-500/20 text-amber-700"

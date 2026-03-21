@@ -153,7 +153,6 @@ def get_team_members() -> list[dict]:
                 status = "stable"
 
         members.append({
-            "first_name": u["first_name"],
             "status": status,
             "checkins_7d": len(checkins),
             "latest_mood": latest["mood"] if latest else None,
