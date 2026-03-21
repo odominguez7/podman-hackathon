@@ -190,9 +190,9 @@ def seed_demo_data():
     init_db()
     conn = get_db()
 
-    # Clear all existing data for clean enterprise seed
-    conn.execute("DELETE FROM checkins")
-    conn.execute("DELETE FROM users")
+    # Clear only meridian demo data, preserve real users
+    conn.execute("DELETE FROM checkins WHERE user_id LIKE 'meridian_%'")
+    conn.execute("DELETE FROM users WHERE id LIKE 'meridian_%'")
     conn.commit()
 
     now = datetime.now()

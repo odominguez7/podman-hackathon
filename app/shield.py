@@ -58,13 +58,17 @@ def _chat_ramalama(messages: list[dict], max_tokens: int = 300) -> str:
         json={
             "model": "granite-3.3-8b-instruct",
             "messages": messages,
-            "max_tokens": max_tokens,
+            "max_tokens": max_tokens * 3,
             "temperature": 0.7,
         },
-        timeout=60.0,
+        timeout=120.0,
     )
     resp.raise_for_status()
-    return resp.json()["choices"][0]["message"]["content"]
+    msg = resp.json()["choices"][0]["message"]
+    content = msg.get("content") or ""
+    if not content.strip():
+        content = msg.get("reasoning_content") or ""
+    return content
 
 
 def _chat_claude(messages: list[dict], max_tokens: int = 300) -> str:

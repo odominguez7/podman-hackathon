@@ -59,8 +59,8 @@ const Landing = () => {
               </p>
             </div>
 
-            <p className="text-base text-muted-foreground leading-relaxed max-w-xl mx-auto">
-              A private, AI-powered daily practice that helps you understand your own patterns so you can show up better for your work, your family, and yourself. Granite 3.3 runs locally. Your data never leaves your infrastructure.
+            <p className="text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto font-medium">
+              Everyone needs you. Who's taking care of YU?
             </p>
 
             <div className="flex items-center justify-center gap-4">
@@ -115,23 +115,6 @@ const Landing = () => {
           </div>
         </section>
 
-        {/* Founder Story */}
-        <section className="px-6 pb-12">
-          <div className="max-w-4xl mx-auto rounded-3xl bg-gradient-to-r from-primary/5 via-transparent to-primary/5 border border-primary/10 p-8">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                <Shield className="h-7 w-7 text-primary" />
-              </div>
-              <div className="space-y-2 text-center md:text-left">
-              <p className="font-bold text-foreground">Built from lived experience</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Omar Dominguez spent 11 years managing capacity in manufacturing before MIT. He lost 80 lbs starting with 7 minutes a day, ran the Boston Marathon, and finished Ironman 70.3. YU Shield exists because taking care of yourself is not selfish. It's one of the best ways to take care of the people who depend on you.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Open Source Stack */}
         <section className="px-6 pb-6">
           <div className="max-w-4xl mx-auto space-y-3">
@@ -181,11 +164,7 @@ const Landing = () => {
       </main>
 
       {/* Footer */}
-      <footer className="px-6 py-6 border-t">
-        <p className="text-[11px] text-muted-foreground/50 text-center">
-          Built by Omar Dominguez. MIT, 11 years optimizing capacity in manufacturing. Now fixing employee wellness.
-        </p>
-      </footer>
+      <footer className="px-6 py-4 border-t" />
     </div>
   );
 };

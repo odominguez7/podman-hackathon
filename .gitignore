@@ -29,3 +29,10 @@ Thumbs.db
 
 # Scripts
 serve-model.sh
+
+# Internal strategy docs
+YU_Shield_Hackathon_V2.md
+YU_PRODUCT_STRATEGY.md
+
+# Build symlink
+static

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Shield, ChevronLeft, History, Send, X, BarChart3, Scan, Lock, Cloud, LogOut, Zap, Moon, Timer, Database, Check } from "lucide-react";
+import { Shield, ChevronLeft, History, Send, X, BarChart3, Scan, Lock, Cloud, LogOut, Zap, Moon, Timer, Database, Check, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { submitCheckin, getHistory, getInsights, registerUser, compareCheckin, seedDemo } from "@/lib/api";
@@ -62,7 +62,7 @@ const Chat = () => {
   const [bookingCategory, setBookingCategory] = useState<string>("calm");
   const [loading, setLoading] = useState(false);
   const [provider, setProvider] = useState<string>("ramalama");
-  const [activeTab, setActiveTab] = useState<"checkin" | "insights" | "lab" | "book">("checkin");
+  const [activeTab, setActiveTab] = useState<"checkin" | "insights" | "challenges" | "rituals" | "book">("checkin");
   const [xrayMode, setXrayMode] = useState(false);
   const [xrayResult, setXrayResult] = useState<{
     local: { response: string; time_ms: number; error?: boolean };
@@ -411,10 +411,11 @@ const Chat = () => {
       {/* Tabs */}
       <div className="flex border-b bg-card shrink-0 px-2 overflow-x-auto">
         {([
-          { id: "checkin" as const, label: "Check-in" },
-          { id: "insights" as const, label: "Insights" },
-          { id: "lab" as const, label: "Lab" },
-          { id: "book" as const, label: "Book" },
+          { id: "checkin" as const, label: "Daily Check-in" },
+          { id: "insights" as const, label: "My Trends" },
+          { id: "challenges" as const, label: "Team Challenges" },
+          { id: "rituals" as const, label: "My Rituals" },
+          { id: "book" as const, label: "Book a Session" },
         ]).map((tab) => (
           <button
             key={tab.id}
@@ -740,146 +741,108 @@ const Chat = () => {
                 <div ref={bottomRef} />
               </div>
 
-              {/* Check-in Input Panel */}
-              <div className="border-t bg-card px-4 py-4 shrink-0">
-                <div className="max-w-lg mx-auto space-y-4">
-                  {/* Mood selector */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-semibold text-foreground">How are you feeling?</p>
-                      {mood && <p className="text-xs text-primary font-medium">{MOODS[mood - 1].label}</p>}
-                    </div>
-                    <div className="flex gap-1 justify-center">
+              {/* Check-in Input Panel - Compact */}
+              <div className="border-t bg-card px-4 py-3 shrink-0">
+                <div className="max-w-xl mx-auto space-y-2.5">
+                  {/* Row 1: Mood emojis - single tight row */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-semibold text-muted-foreground w-10 shrink-0">Mood</span>
+                    <div className="flex gap-0.5 flex-1">
                       {MOODS.map((m) => (
                         <button
                           key={m.value}
                           onClick={() => setMood(m.value)}
-                          className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all ${
+                          className={`flex-1 flex items-center justify-center py-1.5 rounded-lg transition-all ${
                             mood === m.value
-                              ? "bg-primary/15 scale-105 ring-2 ring-primary/30 shadow-sm"
-                              : "hover:bg-muted"
+                              ? "bg-primary/15 ring-1.5 ring-primary/40 scale-105"
+                              : "hover:bg-muted/60"
                           }`}
                         >
-                          <span className="text-2xl">{m.emoji}</span>
-                          <span className="text-[10px] text-muted-foreground">{m.value}</span>
+                          <span className="text-lg">{m.emoji}</span>
                         </button>
                       ))}
                     </div>
+                    {mood && <span className="text-[10px] font-medium text-primary w-10 text-right">{MOODS[mood - 1].label}</span>}
                   </div>
 
-                  {/* Energy & Sleep - pill selectors */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <p className="text-xs font-semibold text-foreground flex items-center gap-1">
-                          <Zap className="h-3 w-3 text-amber-500" /> Energy
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">{ENERGY_LABELS[energy - 1]}</p>
-                      </div>
-                      <div className="flex gap-1">
+                  {/* Row 2: Energy + Sleep side by side, minimal */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 flex-1">
+                      <Zap className="h-3 w-3 text-amber-500 shrink-0" />
+                      <div className="flex gap-0.5 flex-1">
                         {[1, 2, 3, 4, 5].map((v) => (
                           <button
                             key={v}
                             onClick={() => setEnergy(v)}
-                            className={`flex-1 h-9 rounded-lg text-xs font-semibold transition-all ${
+                            className={`flex-1 h-7 rounded-md text-[10px] font-bold transition-all ${
                               energy >= v
-                                ? "bg-amber-500 text-white shadow-sm"
-                                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                ? "bg-amber-500 text-white"
+                                : "bg-muted/60 text-muted-foreground hover:bg-muted"
                             }`}
                           >
                             {v}
                           </button>
                         ))}
                       </div>
+                      <span className="text-[9px] text-muted-foreground w-14 text-right">{ENERGY_LABELS[energy - 1]}</span>
                     </div>
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <p className="text-xs font-semibold text-foreground flex items-center gap-1">
-                          <Moon className="h-3 w-3 text-indigo-500" /> Sleep
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">{SLEEP_LABELS[sleep - 1]}</p>
-                      </div>
-                      <div className="flex gap-1">
+                    <div className="w-px h-5 bg-border" />
+                    <div className="flex items-center gap-1.5 flex-1">
+                      <Moon className="h-3 w-3 text-indigo-500 shrink-0" />
+                      <div className="flex gap-0.5 flex-1">
                         {[1, 2, 3, 4, 5].map((v) => (
                           <button
                             key={v}
                             onClick={() => setSleep(v)}
-                            className={`flex-1 h-9 rounded-lg text-xs font-semibold transition-all ${
+                            className={`flex-1 h-7 rounded-md text-[10px] font-bold transition-all ${
                               sleep >= v
-                                ? "bg-indigo-500 text-white shadow-sm"
-                                : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                ? "bg-indigo-500 text-white"
+                                : "bg-muted/60 text-muted-foreground hover:bg-muted"
                             }`}
                           >
                             {v}
                           </button>
                         ))}
                       </div>
+                      <span className="text-[9px] text-muted-foreground w-14 text-right">{SLEEP_LABELS[sleep - 1]}</span>
                     </div>
                   </div>
 
-                  {/* Note */}
-                  <textarea
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="Anything you want to get off your chest? (optional)"
-                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-foreground text-sm resize-none h-12 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-                  />
-
-                  {/* Quick wellness access */}
-                  <div className="flex gap-2 justify-center">
+                  {/* Row 3: Note + Submit in one line */}
+                  <div className="flex gap-2 items-center">
                     <button
-                      onClick={() => { setBookingCategory("calm"); setActiveTab("book"); }}
-                      className="text-[10px] px-2.5 py-1 rounded-full bg-green-500/10 text-green-600 font-medium hover:bg-green-500/20 transition-all"
+                      onClick={handleQuickDemo}
+                      disabled={loading}
+                      className="h-9 w-9 shrink-0 rounded-lg bg-muted/60 hover:bg-muted flex items-center justify-center transition-all"
+                      title="Random demo check-in"
                     >
-                      Calm Down
+                      <span className="text-sm">🎲</span>
                     </button>
-                    <button
-                      onClick={() => { setBookingCategory("energize"); setActiveTab("book"); }}
-                      className="text-[10px] px-2.5 py-1 rounded-full bg-orange-500/10 text-orange-600 font-medium hover:bg-orange-500/20 transition-all"
+                    <input
+                      type="text"
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="How's your day going? (optional)"
+                      className="flex-1 h-9 px-3 rounded-lg border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-1.5 focus:ring-primary/30 transition-all"
+                    />
+                    <Button
+                      className={`h-9 px-4 text-xs font-semibold shrink-0 transition-all ${
+                        xrayMode
+                          ? "bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white"
+                          : ""
+                      }`}
+                      variant={xrayMode ? "default" : "chat"}
+                      disabled={mood === null || loading}
+                      onClick={handleSubmitCheckIn}
                     >
-                      Energize
-                    </button>
-                    <button
-                      onClick={() => { setBookingCategory("focus"); setActiveTab("book"); }}
-                      className="text-[10px] px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-600 font-medium hover:bg-purple-500/20 transition-all"
-                    >
-                      Focus Prep
-                    </button>
-                    <button
-                      onClick={() => { setBookingCategory("recover"); setActiveTab("book"); }}
-                      className="text-[10px] px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 font-medium hover:bg-rose-500/20 transition-all"
-                    >
-                      Recovery
-                    </button>
-                  </div>
-
-                  {/* Submit */}
-                  <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="h-11 px-3 text-xs text-muted-foreground shrink-0"
-                    onClick={handleQuickDemo}
-                    disabled={loading}
-                    title="Fill random check-in for demo"
-                  >
-                    🎲 Demo
-                  </Button>
-                  <Button
-                    className={`flex-1 h-11 font-semibold transition-all ${
-                      xrayMode
-                        ? "bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white shadow-md"
-                        : ""
-                    }`}
-                    variant={xrayMode ? "default" : "chat"}
-                    disabled={mood === null || loading}
-                    onClick={handleSubmitCheckIn}
-                  >
-                    {xrayMode ? (
-                      <><Scan className="h-4 w-4 mr-2" /> {loading ? "Comparing..." : "Compare Both Models"}</>
-                    ) : (
-                      <><Send className="h-4 w-4 mr-2" /> {loading ? "Sending..." : "Submit Check-In"}</>
-                    )}
-                  </Button>
+                      {loading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : xrayMode ? (
+                        <><Scan className="h-3.5 w-3.5 mr-1.5" /> X-Ray</>
+                      ) : (
+                        <><Send className="h-3.5 w-3.5 mr-1.5" /> Send</>
+                      )}
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -894,7 +857,7 @@ const Chat = () => {
               onLoadInsights={loadInsights}
               section="analytics"
             />
-          ) : activeTab === "lab" ? (
+          ) : activeTab === "challenges" ? (
             <WellnessHub
               history={history}
               baseline={baseline}
@@ -902,7 +865,17 @@ const Chat = () => {
               insightLoading={insightLoading}
               onBookActivity={(cat) => { setBookingCategory(cat); setActiveTab("book"); }}
               onLoadInsights={loadInsights}
-              section="protocols"
+              section="challenges"
+            />
+          ) : activeTab === "rituals" ? (
+            <WellnessHub
+              history={history}
+              baseline={baseline}
+              insightText={insightText}
+              insightLoading={insightLoading}
+              onBookActivity={(cat) => { setBookingCategory(cat); setActiveTab("book"); }}
+              onLoadInsights={loadInsights}
+              section="rituals"
             />
           ) : (
             /* Book tab - inline activities */
