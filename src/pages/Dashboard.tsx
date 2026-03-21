@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   Shield, ChevronLeft, AlertTriangle, Users, TrendingUp, TrendingDown,
   Database, Lock, Eye, EyeOff, Heart, Zap, Moon, Activity, ShieldCheck,
-  ArrowRight, CheckCircle2, XCircle
+  ArrowRight, CheckCircle2, XCircle, UserCheck
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -31,17 +31,32 @@ interface DashboardData {
   daily_trends: { date: string; mood: number; energy: number; sleep: number }[];
 }
 
+interface TeamMember {
+  first_name: string;
+  status: "alert" | "stable" | "inactive";
+  checkins_7d: number;
+  latest_mood: number | null;
+  latest_energy: number | null;
+  latest_sleep: number | null;
+  drift_alerts: number;
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [team, setTeam] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
 
   const loadDashboard = async () => {
     setLoading(true);
     try {
-      const res = await getDashboard();
+      const [res, teamRes] = await Promise.all([
+        getDashboard(),
+        fetch((import.meta.env.VITE_API_URL || "http://localhost:8000") + "/api/dashboard/team").then(r => r.json()),
+      ]);
       setData(res);
+      setTeam(Array.isArray(teamRes) ? teamRes : []);
     } catch {
       setData(null);
     }
@@ -472,6 +487,60 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Team Member Status — Manager View */}
+            {team.length > 0 && (
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="h-5 w-5 text-primary" />
+                      <CardTitle className="text-base">Team Wellness Status</CardTitle>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground bg-muted px-2 py-1 rounded-full">First name only · No personal data</span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {team.map((member, i) => (
+                      <div
+                        key={i}
+                        className={`rounded-2xl p-4 space-y-2 border ${
+                          member.status === "alert"
+                            ? "bg-amber-50/50 dark:bg-amber-950/20 border-amber-500/30"
+                            : member.status === "inactive"
+                            ? "bg-muted/30 border-border"
+                            : "bg-green-50/30 dark:bg-green-950/10 border-green-500/20"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold text-sm text-foreground">{member.first_name}</p>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                            member.status === "alert"
+                              ? "bg-amber-500/20 text-amber-700"
+                              : member.status === "inactive"
+                              ? "bg-muted text-muted-foreground"
+                              : "bg-green-500/20 text-green-700"
+                          }`}>
+                            {member.status === "alert" ? "⚠ DRIFT" : member.status === "inactive" ? "INACTIVE" : "✓ STABLE"}
+                          </span>
+                        </div>
+                        {member.latest_mood !== null ? (
+                          <div className="flex gap-2 text-[10px] text-muted-foreground">
+                            <span>😊 {member.latest_mood}</span>
+                            <span>⚡ {member.latest_energy}</span>
+                            <span>🌙 {member.latest_sleep}</span>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-muted-foreground">No check-ins yet</p>
+                        )}
+                        <p className="text-[10px] text-muted-foreground">{member.checkins_7d} check-ins (7d)</p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Privacy Commitment */}
             <div className="rounded-3xl bg-gradient-to-r from-primary/5 via-transparent to-primary/5 border border-primary/10 p-8">

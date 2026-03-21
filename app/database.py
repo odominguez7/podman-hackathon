@@ -129,6 +129,43 @@ def detect_drift(user_id: str) -> Optional[dict]:
     return {"alerts": alerts, "baseline": baseline, "recent_avg": {"mood": avg_mood, "energy": avg_energy, "sleep": avg_sleep}} if alerts else None
 
 
+def get_team_members() -> list[dict]:
+    """Return anonymized per-member wellness status for manager view."""
+    conn = get_db()
+    users = conn.execute("SELECT id, first_name, created_at FROM users").fetchall()
+    conn.close()
+
+    members = []
+    for u in users:
+        uid = u["id"]
+        checkins = get_checkins(uid, days=7)
+        baseline = get_baseline(uid)
+        drift = detect_drift(uid)
+
+        if not checkins:
+            status = "inactive"
+            latest = None
+        else:
+            latest = checkins[-1]
+            if drift and drift.get("alerts"):
+                status = "alert"
+            else:
+                status = "stable"
+
+        members.append({
+            "first_name": u["first_name"],
+            "status": status,
+            "checkins_7d": len(checkins),
+            "latest_mood": latest["mood"] if latest else None,
+            "latest_energy": latest["energy"] if latest else None,
+            "latest_sleep": latest["sleep"] if latest else None,
+            "baseline": baseline,
+            "drift_alerts": len(drift["alerts"]) if drift and drift.get("alerts") else 0,
+        })
+
+    return sorted(members, key=lambda m: (m["status"] != "alert", m["status"] != "stable"))
+
+
 def get_dashboard_aggregates() -> dict:
     """Aggregate dashboard stats across all users."""
     conn = get_db()
