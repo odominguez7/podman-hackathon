@@ -80,7 +80,7 @@ YU Shield uses behavioral intelligence to detect burnout signals **before** they
 
 ### X-Ray Mode
 
-Side-by-side comparison of **local AI (Granite 3.3)** vs **cloud AI** on the same check-in. Shows response times and privacy indicators. Proves local open-source AI delivers enterprise-quality coaching.
+Same check-in. Two models. One runs locally on Granite 3.3 via RamaLama. The other hits a cloud API. The result? You won't miss the cloud. Local AI delivers enterprise-quality coaching with zero data leaving your infrastructure. That's the whole point of X-Ray: seeing is believing.
 
 ```
 ┌─────────────────────────┐  ┌─────────────────────────┐

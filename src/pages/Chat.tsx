@@ -405,6 +405,7 @@ const Chat = () => {
               <Cloud className="h-3 w-3" /> Cloud AI
             </span>
           </div>
+          <p className="text-[9px] text-muted-foreground text-center mt-1">Same quality. Zero data leaves your machine. That's the point.</p>
         </div>
       )}
 
@@ -655,7 +656,7 @@ const Chat = () => {
                         <div className="flex items-center justify-between pt-3 border-t border-green-500/20">
                           <div className="flex items-center gap-1 text-[10px] text-green-600">
                             <Lock className="h-3 w-3" />
-                            <span>Data never left this device</span>
+                            <span>Your data never left this machine</span>
                           </div>
                           <div className="flex items-center gap-1 text-xs font-mono font-bold text-green-700 bg-green-500/10 px-2 py-0.5 rounded-full">
                             <Timer className="h-3 w-3" />
@@ -696,7 +697,7 @@ const Chat = () => {
                       </div>
                     </div>
                     <p className="text-[10px] text-center text-muted-foreground">
-                      Same check-in, two AI models. Both cite your actual data. Only one keeps it private.
+                      Same check-in. Same quality. Only one kept your data on this machine. You won't miss the cloud.
                     </p>
                     {/* Grounding tag for X-Ray */}
                     <div className="mt-2 mx-auto max-w-md rounded-lg border border-border/50 bg-muted/30 px-3 py-2 space-y-1">

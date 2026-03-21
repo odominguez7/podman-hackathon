@@ -35,7 +35,7 @@ YU Shield is a privacy-first AI wellness companion that detects burnout before i
 
 ## What Makes YU Shield Different
 
-- **X-Ray Mode** -- Side-by-side comparison of local Granite vs cloud AI on the same check-in. Proves open-source local AI delivers enterprise-quality coaching. Response times, quality, and privacy tradeoffs -- all visible.
+- **X-Ray Mode** -- Same check-in, two models, one local, one cloud. The result? You won't miss the cloud. Granite 3.3 delivers enterprise-quality coaching with zero data leaving your machine. Seeing is believing.
 - **MCP Integration** -- 5 exposed tools (check wellness, get recommendations, book activities, submit check-ins, team summary) ready for any MCP-compatible assistant.
 - **Privacy by Architecture** -- Granite runs on-device via RamaLama. SQLite stays local. Employer dashboard shows only anonymous aggregates. HIPAA-ready without cloud dependency.
 - **Drift Detection** -- Not just tracking. Algorithmic early warning: baseline deviation triggers proactive intervention with professional referral paths.

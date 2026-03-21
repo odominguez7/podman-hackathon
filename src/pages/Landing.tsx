@@ -98,7 +98,7 @@ const Landing = () => {
               </div>
               <h3 className="font-bold text-foreground">X-Ray Mode</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Submit one check-in and see Granite 3.3 local versus a cloud model respond side by side. Same data, two models, real response times. Local AI is viable for enterprise wellness.
+                Same check-in. Two models. One local, one cloud. See for yourself: Granite 3.3 delivers enterprise-quality coaching without a single byte leaving your machine.
               </p>
             </div>
 
