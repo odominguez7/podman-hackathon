@@ -68,7 +68,7 @@ YU Shield uses behavioral intelligence to detect burnout signals **before** they
          │                                │
 ┌────────▼────────┐            ┌──────────▼──────────┐
 │  LOCAL (default) │            │  CLOUD (X-Ray only) │
-│  RamaLama        │            │  Claude Sonnet API   │
+│  RamaLama        │            │  Cloud AI (compare)  │
 │  Granite 3.3 8B  │            │  (optional)          │
 │  Data stays here │            │  For comparison only │
 └─────────────────┘            └─────────────────────┘
@@ -80,12 +80,12 @@ YU Shield uses behavioral intelligence to detect burnout signals **before** they
 
 ### X-Ray Mode
 
-Side-by-side comparison of **local AI (Granite 3.3)** vs **cloud AI (Claude)** on the same check-in. Shows response times and privacy indicators. Proves local open-source AI delivers enterprise-quality coaching.
+Side-by-side comparison of **local AI (Granite 3.3)** vs **cloud AI** on the same check-in. Shows response times and privacy indicators. Proves local open-source AI delivers enterprise-quality coaching.
 
 ```
 ┌─────────────────────────┐  ┌─────────────────────────┐
-│  LOCAL  Granite 3.3      │  │  CLOUD  Claude Sonnet   │
-│  Data never left device  │  │  Sent to Anthropic API  │
+│  LOCAL  Granite 3.3      │  │  CLOUD  Cloud AI         │
+│  Data never left device  │  │  Sent to cloud API      │
 │                          │  │                          │
 │  "Your mood dropped      │  │  "I notice your mood     │
 │  from 4.2 to 2.6..."    │  │  has shifted from..."    │
@@ -110,7 +110,7 @@ Every AI response cites **specific data points** and includes a confidence indic
 
 ### MCP Tools
 
-5 tools exposed via **Model Context Protocol**. Any AI assistant (Claude Desktop, Cursor, custom agents) can interact with YU Shield:
+5 tools exposed via **Model Context Protocol**. Any MCP-compatible AI assistant can interact with YU Shield:
 
 | Tool | Description |
 |------|-------------|
@@ -235,7 +235,7 @@ podman-hackathon/
 ├── app/                          # Python backend
 │   ├── main.py                   # FastAPI. 12 endpoints + SPA serving
 │   ├── database.py               # SQLite. Users, check-ins, baselines, drift, departments
-│   ├── shield.py                 # AI engine. Dual provider (RamaLama + Claude)
+│   ├── shield.py                 # AI engine. Dual provider (local + cloud)
 │   ├── mcp_server.py             # FastMCP. 5 wellness tools
 │   └── seed_demo.py              # Enterprise demo data (38 users, 9 departments)
 ├── src/                          # React frontend
@@ -252,7 +252,7 @@ podman-hackathon/
 │       └── api.ts                # API client
 ├── Dockerfile                    # Multi-stage: Node 20 build, Python 3.12 runtime
 ├── docker-compose.yml            # Podman Compose with volume persistence
-├── requirements.txt              # FastAPI, FastMCP, Anthropic, httpx, Pydantic
+├── requirements.txt              # FastAPI, FastMCP, httpx, Pydantic
 ├── .env.example                  # Environment variable template
 └── SUBMISSION.md                 # 1-page hackathon submission
 ```
@@ -292,7 +292,7 @@ YU Shield was designed with the hackathon's ethics criteria in mind:
 |-------|-----------|
 | **Container** | Podman + multi-stage Dockerfile |
 | **Local AI** | RamaLama + IBM Granite 3.3 8B Instruct (open source, Apache 2.0) |
-| **Cloud AI** | Claude Sonnet (Anthropic). X-Ray mode comparison only |
+| **Cloud AI** | Cloud AI provider (X-Ray mode comparison only) |
 | **MCP** | FastMCP (5 tools, live playground) |
 | **Backend** | FastAPI + SQLite + Python 3.12 |
 | **Frontend** | React 18 + Vite + TypeScript + Tailwind CSS + shadcn/ui |
@@ -331,5 +331,5 @@ YU Shield exists because the people who depend on you need you at your best.
   <img src="https://img.shields.io/badge/Red_Hat-EE0000?style=flat-square&logo=redhat&logoColor=white" />
   <img src="https://img.shields.io/badge/IBM-052FAD?style=flat-square&logo=ibm&logoColor=white" />
   <img src="https://img.shields.io/badge/Podman-892CA0?style=flat-square&logo=podman&logoColor=white" />
-  <img src="https://img.shields.io/badge/Anthropic-191919?style=flat-square" />
+  <img src="https://img.shields.io/badge/MIT_Sloan-8A8B8C?style=flat-square&logo=data:image/svg+xml;base64,&logoColor=white" />
 </p>

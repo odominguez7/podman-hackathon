@@ -402,7 +402,7 @@ const Chat = () => {
             </span>
             <span className="text-muted-foreground font-bold">VS</span>
             <span className="flex items-center gap-1 text-blue-600 font-medium">
-              <Cloud className="h-3 w-3" /> Claude Sonnet Cloud
+              <Cloud className="h-3 w-3" /> Cloud AI
             </span>
           </div>
         </div>
@@ -664,7 +664,7 @@ const Chat = () => {
                         </div>
                       </div>
 
-                      {/* Cloud (Claude) Card */}
+                      {/* Cloud Card */}
                       <div className="rounded-2xl border-2 border-blue-500/40 bg-gradient-to-b from-blue-50 to-white dark:from-blue-950/30 dark:to-card p-5 space-y-3 shadow-lg shadow-blue-500/10 transition-all hover:shadow-xl hover:shadow-blue-500/15">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -672,8 +672,8 @@ const Chat = () => {
                               <Cloud className="h-4 w-4 text-blue-600" />
                             </div>
                             <div>
-                              <p className="text-xs font-bold text-blue-700 dark:text-blue-400">Claude Sonnet</p>
-                              <p className="text-[10px] text-blue-600/70">Anthropic Cloud</p>
+                              <p className="text-xs font-bold text-blue-700 dark:text-blue-400">Cloud Model</p>
+                              <p className="text-[10px] text-blue-600/70">Cloud API</p>
                             </div>
                           </div>
                           <span className="px-2 py-1 rounded-full bg-blue-500/15 text-blue-700 text-[10px] font-bold tracking-wide">CLOUD</span>
@@ -686,7 +686,7 @@ const Chat = () => {
                         <div className="flex items-center justify-between pt-3 border-t border-blue-500/20">
                           <div className="flex items-center gap-1 text-[10px] text-blue-600">
                             <Cloud className="h-3 w-3" />
-                            <span>Sent to Anthropic API</span>
+                            <span>Sent to cloud API</span>
                           </div>
                           <div className="flex items-center gap-1 text-xs font-mono font-bold text-blue-700 bg-blue-500/10 px-2 py-0.5 rounded-full">
                             <Timer className="h-3 w-3" />

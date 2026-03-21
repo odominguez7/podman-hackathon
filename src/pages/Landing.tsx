@@ -98,7 +98,7 @@ const Landing = () => {
               </div>
               <h3 className="font-bold text-foreground">X-Ray Mode</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Submit one check-in and see Granite 3.3 local versus Claude cloud respond side by side. Same data, two models, real response times. Local AI is viable for enterprise wellness.
+                Submit one check-in and see Granite 3.3 local versus a cloud model respond side by side. Same data, two models, real response times. Local AI is viable for enterprise wellness.
               </p>
             </div>
 
@@ -108,7 +108,7 @@ const Landing = () => {
               </div>
               <h3 className="font-bold text-foreground">MCP Native</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                YU Shield exposes 5 wellness tools via Model Context Protocol. Any AI assistant, Claude Desktop, Cursor, or your own agents can check team wellness and book activities programmatically.
+                YU Shield exposes 5 wellness tools via Model Context Protocol. Any MCP-compatible AI assistant can check team wellness and book activities programmatically.
               </p>
             </div>
 

@@ -217,7 +217,7 @@ const MCPPlayground = () => {
               <p className="text-sm font-semibold text-foreground">What is MCP?</p>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 The <span className="font-semibold text-foreground">Model Context Protocol</span> is an open standard that lets AI assistants call external tools.
-                YU Shield exposes 5 wellness tools via MCP, so any compatible AI assistant (Claude Desktop, Cursor, custom agents) can check employee wellness,
+                YU Shield exposes 5 wellness tools via MCP, so any MCP-compatible AI assistant can check employee wellness,
                 get activity recommendations, and book wellness sessions programmatically. All data stays local. All employer-facing data is anonymous.
               </p>
               <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
