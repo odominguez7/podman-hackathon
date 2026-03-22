@@ -77,12 +77,17 @@ def do_checkin(data: CheckIn):
             drift=drift,
             provider=data.provider,
         )
+        print(f"[CHECKIN DEBUG] user={data.user_id} response_len={len(response) if response else 0} response_preview={repr(response[:80]) if response else 'NONE'}")
     except Exception as e:
+        print(f"[CHECKIN DEBUG] EXCEPTION: {e}")
         response = f"I heard you. Mood {data.mood}/5, energy {data.energy}/5, sleep {data.sleep}/5. The AI engine is warming up, but your check-in was recorded. Check back shortly."
+
+    final_response = response or f"I heard you. Mood {data.mood}/5, energy {data.energy}/5, sleep {data.sleep}/5. Your check-in was recorded."
+    print(f"[CHECKIN DEBUG] final_response_len={len(final_response)}")
 
     return {
         "status": "ok",
-        "response": response or f"I heard you. Mood {data.mood}/5, energy {data.energy}/5, sleep {data.sleep}/5. Your check-in was recorded.",
+        "response": final_response,
         "baseline": baseline,
         "drift": drift,
     }
@@ -265,4 +270,4 @@ if STATIC_DIR.exists():
         file_path = STATIC_DIR / full_path
         if file_path.exists() and file_path.is_file():
             return FileResponse(file_path)
-        return FileResponse(STATIC_DIR / "index.html")
+        return FileResponse(STATIC_DIR / "index.html", headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"})
