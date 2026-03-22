@@ -1,11 +1,16 @@
 import os
+import sys
 import time
+import logging
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+logger = logging.getLogger("yu-shield")
 from app.database import init_db, create_user, get_user, add_checkin, get_checkins, get_baseline, detect_drift, get_dashboard_aggregates, get_team_members, get_department_stats
 from app.shield import generate_checkin_response, generate_insight, DEMO_MODE, _mock_xray_responses
 from app.seed_demo import seed_demo_data
@@ -77,13 +82,13 @@ def do_checkin(data: CheckIn):
             drift=drift,
             provider=data.provider,
         )
-        print(f"[CHECKIN DEBUG] user={data.user_id} response_len={len(response) if response else 0} response_preview={repr(response[:80]) if response else 'NONE'}")
+        logger.info(f"CHECKIN user={data.user_id} response_len={len(response) if response else 0}")
     except Exception as e:
-        print(f"[CHECKIN DEBUG] EXCEPTION: {e}")
+        logger.error(f"CHECKIN EXCEPTION: {e}")
         response = f"I heard you. Mood {data.mood}/5, energy {data.energy}/5, sleep {data.sleep}/5. The AI engine is warming up, but your check-in was recorded. Check back shortly."
 
     final_response = response or f"I heard you. Mood {data.mood}/5, energy {data.energy}/5, sleep {data.sleep}/5. Your check-in was recorded."
-    print(f"[CHECKIN DEBUG] final_response_len={len(final_response)}")
+    logger.info(f"CHECKIN final_len={len(final_response)}")
 
     return {
         "status": "ok",

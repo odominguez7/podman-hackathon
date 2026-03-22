@@ -1,7 +1,5 @@
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
-
 export async function registerUser(userId: string, firstName: string) {
-  const res = await fetch(`${API_BASE}/api/users`, {
+  const res = await fetch("/api/users", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: userId, first_name: firstName }),
@@ -17,21 +15,23 @@ export async function submitCheckin(
   provider: string = "ramalama",
   note?: string
 ) {
-  const res = await fetch(`${API_BASE}/api/checkin`, {
+  const res = await fetch("/api/checkin", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: userId, mood, energy, sleep, note, provider }),
   });
-  return res.json();
+  const data = await res.json();
+  console.log("API /api/checkin response:", JSON.stringify(data).substring(0, 200));
+  return data;
 }
 
 export async function getInsights(userId: string, provider: string = "ramalama") {
-  const res = await fetch(`${API_BASE}/api/insights/${userId}?provider=${provider}`);
+  const res = await fetch(`/api/insights/${userId}?provider=${provider}`);
   return res.json();
 }
 
 export async function getHistory(userId: string) {
-  const res = await fetch(`${API_BASE}/api/history/${userId}`);
+  const res = await fetch(`/api/history/${userId}`);
   return res.json();
 }
 
@@ -42,25 +42,27 @@ export async function compareCheckin(
   sleep: number,
   note?: string
 ) {
-  const res = await fetch(`${API_BASE}/api/checkin/compare`, {
+  const res = await fetch("/api/checkin/compare", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: userId, mood, energy, sleep, note }),
   });
-  return res.json();
+  const data = await res.json();
+  console.log("API /api/checkin/compare response:", JSON.stringify(data).substring(0, 300));
+  return data;
 }
 
 export async function getDashboard() {
-  const res = await fetch(`${API_BASE}/api/dashboard`);
+  const res = await fetch("/api/dashboard");
   return res.json();
 }
 
 export async function seedDemo() {
-  const res = await fetch(`${API_BASE}/api/seed-demo`, { method: "POST" });
+  const res = await fetch("/api/seed-demo", { method: "POST" });
   return res.json();
 }
 
 export async function getDepartments() {
-  const res = await fetch(`${API_BASE}/api/dashboard/departments`);
+  const res = await fetch("/api/dashboard/departments");
   return res.json();
 }

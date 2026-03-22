@@ -240,11 +240,14 @@ const Chat = () => {
         }
       } else {
         const result = await submitCheckin(userId, submittedMood, submittedEnergy, submittedSleep, provider, submittedNote);
+        console.log("CHECKIN RESULT:", JSON.stringify(result));
+
+        const fallbackResponse = `Hey ${firstName}! Mood ${submittedMood}/5, energy ${submittedEnergy}/5, sleep ${submittedSleep}/5. Your check-in was recorded. ${submittedSleep <= 2 ? "Your sleep score stands out - consider a Deep Stretch Class at FitHub (40 min) or Yin Yoga at Down Under Yoga (60 min) tonight." : submittedMood <= 2 ? "I'd recommend a Restorative Yoga session at Down Under Yoga (45 min) or a Guided Meditation in the Wellness Room (20 min)." : submittedMood >= 4 && submittedEnergy >= 4 ? "You're crushing it today! Consider a HIIT Express at FitHub (25 min) to ride this wave." : "Check out the Wellness Lab for some focus activities. How's the week shaping up?"}`;
 
         const aiMsg: ChatMessage = {
           id: `ai-${Date.now()}`,
           role: "ai",
-          content: result.response || "Thanks for checking in!",
+          content: result.response || fallbackResponse,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, aiMsg]);
