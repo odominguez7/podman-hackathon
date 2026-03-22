@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from app.database import init_db, create_user, get_user, add_checkin, get_checkins, get_baseline, detect_drift, get_dashboard_aggregates, get_team_members, get_department_stats
-from app.shield import generate_checkin_response, generate_insight
+from app.shield import generate_checkin_response, generate_insight, DEMO_MODE, _mock_xray_responses
 from app.seed_demo import seed_demo_data
 
 app = FastAPI(title="YU Shield", description="AI Wellness Companion for Employees")
@@ -24,6 +24,8 @@ app.add_middleware(
 @app.on_event("startup")
 def startup():
     init_db()
+    if DEMO_MODE:
+        seed_demo_data()
 
 
 # --- Models ---
@@ -61,6 +63,12 @@ def do_checkin(data: CheckIn):
     baseline = get_baseline(data.user_id)
     drift = detect_drift(data.user_id)
 
+    # In demo mode, always show a populated baseline so the UI never shows "Limited data"
+    if DEMO_MODE and not baseline:
+        baseline = {"mood": 3.8, "energy": 3.5, "sleep": 3.6, "data_points": 14}
+    if DEMO_MODE and (not drift or not drift.get("alerts")) and (data.mood <= 2 or data.energy <= 2 or data.sleep <= 2):
+        drift = {"alerts": [{"metric": "mood" if data.mood <= 2 else ("energy" if data.energy <= 2 else "sleep"), "baseline": 3.8, "recent": round((data.mood + data.energy + data.sleep) / 3, 1)}]}
+
     try:
         response = generate_checkin_response(
             first_name=user["first_name"],
@@ -92,7 +100,23 @@ def do_checkin_compare(data: CheckIn):
     baseline = get_baseline(data.user_id)
     drift = detect_drift(data.user_id)
 
+    # In demo mode, always show a populated baseline so the UI never shows "Limited data"
+    if DEMO_MODE and not baseline:
+        baseline = {"mood": 3.8, "energy": 3.5, "sleep": 3.6, "data_points": 14}
+    if DEMO_MODE and (not drift or not drift.get("alerts")) and (data.mood <= 2 or data.energy <= 2 or data.sleep <= 2):
+        drift = {"alerts": [{"metric": "mood" if data.mood <= 2 else ("energy" if data.energy <= 2 else "sleep"), "baseline": 3.8, "recent": round((data.mood + data.energy + data.sleep) / 3, 1)}]}
+
     checkin_dict = {"mood": data.mood, "energy": data.energy, "sleep": data.sleep, "note": data.note}
+
+    if DEMO_MODE:
+        mock = _mock_xray_responses(user["first_name"], data.mood, data.energy, data.sleep, data.note)
+        return {
+            "status": "ok",
+            "local": {"response": mock["local"], "time_ms": mock["local_ms"], "provider": "ramalama", "model": "Granite 3.3 8B (Local)"},
+            "cloud": {"response": mock["cloud"], "time_ms": mock["cloud_ms"], "provider": "claude", "model": "Claude Sonnet (Cloud)"},
+            "baseline": baseline,
+            "drift": drift,
+        }
 
     # --- Local (RamaLama) ---
     try:
