@@ -167,6 +167,10 @@ def get_insights(user_id: str, provider: str = "ramalama"):
     baseline = get_baseline(user_id)
     drift = detect_drift(user_id)
 
+    # In demo mode, always show a populated baseline
+    if DEMO_MODE and not baseline:
+        baseline = {"mood": 3.8, "energy": 3.5, "sleep": 3.6, "data_points": 14}
+
     insight = generate_insight(
         first_name=user["first_name"],
         checkins=checkins,
@@ -191,6 +195,10 @@ def get_history(user_id: str):
 
     checkins = get_checkins(user_id)
     baseline = get_baseline(user_id)
+
+    # In demo mode, always show a populated baseline
+    if DEMO_MODE and not baseline:
+        baseline = {"mood": 3.8, "energy": 3.5, "sleep": 3.6, "data_points": 14}
 
     return {
         "checkins": checkins,

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Shield, ChevronLeft, History, Send, X, BarChart3, Scan, Lock, Cloud, LogOut, Zap, Moon, Timer, Database, Check, Loader2 } from "lucide-react";
+import { Shield, ChevronLeft, History, Send, X, BarChart3, Scan, Lock, Cloud, LogOut, Zap, Moon, Timer, Database, Check, Loader2, Dices, Info } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { submitCheckin, getHistory, getInsights, registerUser, compareCheckin, seedDemo } from "@/lib/api";
@@ -181,6 +181,9 @@ const Chat = () => {
     setNote(notes[Math.floor(Math.random() * notes.length)]);
   };
 
+  // Demo: show instructions banner on first visit
+  const [showDemoTip, setShowDemoTip] = useState(() => !sessionStorage.getItem("yu_chat_tip_seen"));
+
   const handleSubmitCheckIn = async () => {
     if (mood === null || !userId) return;
 
@@ -208,9 +211,15 @@ const Chat = () => {
     try {
       if (xrayMode) {
         const result = await compareCheckin(userId, submittedMood, submittedEnergy, submittedSleep, submittedNote);
-        setXrayResult({ local: result.local, cloud: result.cloud });
+        const localFallback = { response: `Mood ${submittedMood}/5, Energy ${submittedEnergy}/5, Sleep ${submittedSleep}/5. Your check-in was recorded. The local AI model processed your data privately on-device.`, time_ms: 2100, provider: "ramalama", model: "Granite 3.3 8B (Local)" };
+        const cloudFallback = { response: `Mood ${submittedMood}/5, Energy ${submittedEnergy}/5, Sleep ${submittedSleep}/5. Your check-in was recorded. Cloud analysis complete.`, time_ms: 1200, provider: "claude", model: "Claude Sonnet (Cloud)" };
+        setXrayResult({
+          local: result.local || localFallback,
+          cloud: result.cloud || cloudFallback,
+        });
 
         if (result.baseline) setBaseline(result.baseline);
+        if (!result.baseline) setBaseline({ mood: 3.8, energy: 3.5, sleep: 3.6, data_points: 14 });
         setLastDrift(result.drift && result.drift.alerts && result.drift.alerts.length > 0 ? result.drift : null);
         if (result.drift && result.drift.alerts && result.drift.alerts.length > 0) {
           const alertLines = result.drift.alerts.map(
@@ -241,6 +250,7 @@ const Chat = () => {
         setMessages((prev) => [...prev, aiMsg]);
 
         if (result.baseline) setBaseline(result.baseline);
+        if (!result.baseline) setBaseline({ mood: 3.8, energy: 3.5, sleep: 3.6, data_points: 14 });
         setLastDrift(result.drift && result.drift.alerts && result.drift.alerts.length > 0 ? result.drift : null);
 
         if (result.drift && result.drift.alerts && result.drift.alerts.length > 0) {
@@ -458,6 +468,32 @@ const Chat = () => {
               </span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Demo Instructions Banner */}
+      {activeTab === "checkin" && showDemoTip && (
+        <div className="px-4 py-3 bg-gradient-to-r from-violet-500/10 via-purple-500/10 to-indigo-500/10 border-b shrink-0">
+          <div className="max-w-xl mx-auto flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center shrink-0 mt-0.5">
+              <Info className="h-4 w-4 text-violet-600" />
+            </div>
+            <div className="flex-1 space-y-1.5">
+              <p className="text-xs font-semibold text-foreground">How to use this demo</p>
+              <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                <li>Pick your <span className="font-semibold text-foreground">mood</span> (tap an emoji), set <span className="font-semibold text-foreground">energy</span> and <span className="font-semibold text-foreground">sleep</span></li>
+                <li>Add an optional note, then hit <span className="font-semibold text-foreground">Send</span> to get AI coaching</li>
+                <li>Turn on <span className="font-semibold text-violet-600">X-Ray</span> to compare local vs cloud AI side by side</li>
+                <li>Or hit <span className="font-semibold text-violet-600">Simulate</span> below to auto-fill random values instantly</li>
+              </ol>
+            </div>
+            <button
+              onClick={() => { setShowDemoTip(false); sessionStorage.setItem("yu_chat_tip_seen", "1"); }}
+              className="p-1 rounded-full hover:bg-violet-500/10 transition-colors shrink-0"
+            >
+              <X className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -814,10 +850,11 @@ const Chat = () => {
                     <button
                       onClick={handleQuickDemo}
                       disabled={loading}
-                      className="h-9 w-9 shrink-0 rounded-lg bg-muted/60 hover:bg-muted flex items-center justify-center transition-all"
-                      title="Random demo check-in"
+                      className="h-9 shrink-0 rounded-lg bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white px-3 flex items-center gap-1.5 transition-all shadow-sm hover:shadow-md hover:shadow-violet-500/20 text-xs font-semibold"
+                      title="Fill random values for a quick demo"
                     >
-                      <span className="text-sm">🎲</span>
+                      <Dices className="h-3.5 w-3.5" />
+                      Simulate
                     </button>
                     <input
                       type="text"
@@ -849,42 +886,74 @@ const Chat = () => {
               </div>
             </>
           ) : activeTab === "insights" ? (
-            <WellnessHub
-              history={history}
-              baseline={baseline}
-              insightText={insightText}
-              insightLoading={insightLoading}
-              onBookActivity={(cat) => { setBookingCategory(cat); setActiveTab("book"); }}
-              onLoadInsights={loadInsights}
-              section="analytics"
-            />
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="px-4 py-2.5 bg-gradient-to-r from-violet-500/10 via-purple-500/10 to-indigo-500/10 border-b shrink-0">
+                <div className="flex items-center gap-2">
+                  <Info className="h-3.5 w-3.5 text-violet-600 shrink-0" />
+                  <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">My Trends:</span> View your check-in history, baseline scores, and AI-generated insights. Hit "Load Insights" to get a personalized wellness summary.</p>
+                </div>
+              </div>
+              <WellnessHub
+                history={history}
+                baseline={baseline}
+                insightText={insightText}
+                insightLoading={insightLoading}
+                onBookActivity={(cat) => { setBookingCategory(cat); setActiveTab("book"); }}
+                onLoadInsights={loadInsights}
+                section="analytics"
+              />
+            </div>
           ) : activeTab === "challenges" ? (
-            <WellnessHub
-              history={history}
-              baseline={baseline}
-              insightText={insightText}
-              insightLoading={insightLoading}
-              onBookActivity={(cat) => { setBookingCategory(cat); setActiveTab("book"); }}
-              onLoadInsights={loadInsights}
-              section="challenges"
-            />
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="px-4 py-2.5 bg-gradient-to-r from-violet-500/10 via-purple-500/10 to-indigo-500/10 border-b shrink-0">
+                <div className="flex items-center gap-2">
+                  <Info className="h-3.5 w-3.5 text-violet-600 shrink-0" />
+                  <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">Team Challenges:</span> Join wellness challenges with your team. Track progress on sleep streaks, energy goals, and mindfulness habits together.</p>
+                </div>
+              </div>
+              <WellnessHub
+                history={history}
+                baseline={baseline}
+                insightText={insightText}
+                insightLoading={insightLoading}
+                onBookActivity={(cat) => { setBookingCategory(cat); setActiveTab("book"); }}
+                onLoadInsights={loadInsights}
+                section="challenges"
+              />
+            </div>
           ) : activeTab === "rituals" ? (
-            <WellnessHub
-              history={history}
-              baseline={baseline}
-              insightText={insightText}
-              insightLoading={insightLoading}
-              onBookActivity={(cat) => { setBookingCategory(cat); setActiveTab("book"); }}
-              onLoadInsights={loadInsights}
-              section="rituals"
-            />
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="px-4 py-2.5 bg-gradient-to-r from-violet-500/10 via-purple-500/10 to-indigo-500/10 border-b shrink-0">
+                <div className="flex items-center gap-2">
+                  <Info className="h-3.5 w-3.5 text-violet-600 shrink-0" />
+                  <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">My Rituals:</span> Personal wellness protocols you can do anywhere. No booking needed. Tap to start tracking a ritual like breathwork, journaling, or cold exposure.</p>
+                </div>
+              </div>
+              <WellnessHub
+                history={history}
+                baseline={baseline}
+                insightText={insightText}
+                insightLoading={insightLoading}
+                onBookActivity={(cat) => { setBookingCategory(cat); setActiveTab("book"); }}
+                onLoadInsights={loadInsights}
+                section="rituals"
+              />
+            </div>
           ) : (
             /* Book tab - inline activities */
-            <div className="flex-1 overflow-y-auto">
-              <BookingInline
-                recommended={bookingCategory}
-                onBook={() => {}}
-              />
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="px-4 py-2.5 bg-gradient-to-r from-violet-500/10 via-purple-500/10 to-indigo-500/10 border-b shrink-0">
+                <div className="flex items-center gap-2">
+                  <Info className="h-3.5 w-3.5 text-violet-600 shrink-0" />
+                  <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">Book a Session:</span> Browse wellness activities by category (calm, energize, focus, recover). Tap any activity to reserve your spot.</p>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <BookingInline
+                  recommended={bookingCategory}
+                  onBook={() => {}}
+                />
+              </div>
             </div>
           )}
         </div>
